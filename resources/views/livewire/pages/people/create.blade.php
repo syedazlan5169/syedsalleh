@@ -77,41 +77,50 @@ new class extends Component
     }
 }; ?>
 
-<div class="flex h-full w-full flex-1 flex-col gap-4">
+<div class="min-h-screen bg-neutral-50 dark:bg-neutral-950 pb-6">
+    <div class="sticky top-0 z-10 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 px-4 py-3 sm:px-6">
         <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-bold">{{ __('Add Person') }}</h1>
-            <flux:button href="{{ route('people.index') }}" variant="ghost">
-                {{ __('Back') }}
+            <h1 class="text-xl sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100">{{ __('Add Person') }}</h1>
+            <flux:button href="{{ route('people.index') }}" variant="ghost" size="sm" class="text-sm sm:text-base">
+                {{ __('Cancel') }}
             </flux:button>
         </div>
+    </div>
 
-        <div class="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-6">
-            <form wire:submit="store" class="space-y-6">
-                <flux:input wire:model="name" :label="__('Name')" type="text" required autofocus />
-                
-                <flux:input wire:model.live="nric" :label="__('NRIC')" type="text" required />
-                
-                <flux:input wire:model="date_of_birth" :label="__('Date of Birth')" type="date" required />
-                
-                <flux:select wire:model="gender" :label="__('Gender')" required>
-                    <option value="Male">{{ __('Male') }}</option>
-                    <option value="Female">{{ __('Female') }}</option>
-                </flux:select>
-                
-                <flux:input wire:model="occupation" :label="__('Occupation')" type="text" />
-                
-                <flux:textarea wire:model="address" :label="__('Address')" />
-                
-                <flux:input wire:model="phone" :label="__('Phone')" type="tel" />
-                
-                <flux:input wire:model="email" :label="__('Email')" type="email" />
+    <div class="px-4 sm:px-6 pt-4 sm:pt-6 max-w-2xl mx-auto">
+        <div class="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 sm:p-6 lg:p-8 shadow-sm">
+            <form wire:submit="store" class="space-y-5 sm:space-y-6">
+                <div class="grid gap-5 sm:gap-6">
+                    <flux:input wire:model="name" :label="__('Name')" type="text" required autofocus class="text-base" />
+                    
+                    <flux:input wire:model.live="nric" :label="__('NRIC')" type="text" required class="text-base" />
+                    
+                    <div class="grid grid-cols-2 gap-4 sm:gap-5">
+                        <flux:input wire:model="date_of_birth" :label="__('Date of Birth')" type="date" required class="text-base" />
+                        
+                        <flux:select wire:model="gender" :label="__('Gender')" required class="text-base">
+                            <option value="Male">{{ __('Male') }}</option>
+                            <option value="Female">{{ __('Female') }}</option>
+                        </flux:select>
+                    </div>
+                    
+                    <flux:input wire:model="occupation" :label="__('Occupation')" type="text" class="text-base" />
+                    
+                    <flux:textarea wire:model="address" :label="__('Address')" rows="3" class="text-base" />
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                        <flux:input wire:model="phone" :label="__('Phone')" type="tel" class="text-base" />
+                        
+                        <flux:input wire:model="email" :label="__('Email')" type="email" class="text-base" />
+                    </div>
+                </div>
 
-                <div class="flex items-center gap-4">
-                    <flux:button type="submit" variant="primary">
-                        {{ __('Create') }}
-                    </flux:button>
-                    <flux:button href="{{ route('people.index') }}" variant="ghost" type="button">
+                <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+                    <flux:button href="{{ route('people.index') }}" variant="ghost" type="button" class="w-full sm:w-auto text-base">
                         {{ __('Cancel') }}
+                    </flux:button>
+                    <flux:button type="submit" variant="primary" class="w-full sm:w-auto text-base font-semibold">
+                        {{ __('Create Person') }}
                     </flux:button>
                 </div>
             </form>

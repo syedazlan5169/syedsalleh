@@ -8,7 +8,7 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
 
-Route::view('dashboard', 'dashboard')
+Volt::route('dashboard', 'pages.dashboard')
     ->middleware(['auth', 'verified', 'approved'])
     ->name('dashboard');
 

@@ -34,6 +34,8 @@ class CreateNewUser implements CreatesNewUsers
             'name' => $input['name'],
             'email' => $input['email'],
             'password' => $input['password'],
+            'is_admin' => false,
+            'approved_at' => null, // New users need admin approval (admins are auto-approved)
         ]);
     }
 }

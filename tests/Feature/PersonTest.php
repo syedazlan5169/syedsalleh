@@ -5,7 +5,7 @@ use App\Models\User;
 use Livewire\Volt\Volt;
 
 test('user can view their people', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->approved()->create();
     Person::factory()->count(3)->create(['user_id' => $user->id]);
 
     $this->actingAs($user);
@@ -14,7 +14,7 @@ test('user can view their people', function () {
 });
 
 test('user can create a person', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->approved()->create();
 
     $this->actingAs($user);
 
@@ -36,7 +36,7 @@ test('user can create a person', function () {
 });
 
 test('user can create a person with only required fields', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->approved()->create();
 
     $this->actingAs($user);
 
@@ -59,8 +59,8 @@ test('user can create a person with only required fields', function () {
 });
 
 test('user can view all people', function () {
-    $user1 = User::factory()->create();
-    $user2 = User::factory()->create();
+    $user1 = User::factory()->approved()->create();
+    $user2 = User::factory()->approved()->create();
 
     Person::factory()->create(['user_id' => $user1->id, 'name' => 'Person 1']);
     Person::factory()->create(['user_id' => $user2->id, 'name' => 'Person 2']);
@@ -71,8 +71,8 @@ test('user can view all people', function () {
 });
 
 test('user can only edit their own people', function () {
-    $user1 = User::factory()->create();
-    $user2 = User::factory()->create();
+    $user1 = User::factory()->approved()->create();
+    $user2 = User::factory()->approved()->create();
 
     $person = Person::factory()->create(['user_id' => $user1->id]);
 
@@ -82,8 +82,8 @@ test('user can only edit their own people', function () {
 });
 
 test('user can view any person profile', function () {
-    $user1 = User::factory()->create();
-    $user2 = User::factory()->create();
+    $user1 = User::factory()->approved()->create();
+    $user2 = User::factory()->approved()->create();
 
     $person = Person::factory()->create(['user_id' => $user1->id]);
 

@@ -9,10 +9,10 @@ Route::get('/', function () {
 })->name('home');
 
 Route::view('dashboard', 'dashboard')
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'approved'])
     ->name('dashboard');
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'approved'])->group(function () {
     Route::redirect('settings', 'settings/profile');
 
     Volt::route('settings/profile', 'settings.profile')->name('profile.edit');
@@ -36,4 +36,14 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('people/{person}/edit', 'pages.people.edit')->name('people.edit');
     Volt::route('people/{person}', 'pages.people.show')->name('people.show');
     Volt::route('people-all', 'pages.people.all')->name('people.all');
+});
+
+// Approval pending page (accessible without approval)
+Route::middleware(['auth'])->group(function () {
+    Volt::route('approval/pending', 'pages.approval.pending')->name('approval.pending');
+});
+
+// Admin routes (only for admins)
+Route::middleware(['auth', 'approved'])->group(function () {
+    Volt::route('admin/users', 'pages.admin.users')->name('admin.users');
 });

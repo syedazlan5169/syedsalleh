@@ -91,3 +91,21 @@ test('user can view any person profile', function () {
 
     $this->get(route('people.show', $person))->assertOk();
 });
+
+test('gender is autofilled from NRIC last digit - even is female, odd is male', function () {
+    $user = User::factory()->approved()->create();
+
+    $this->actingAs($user);
+
+    // Test with even last digit (should be Female)
+    $response = Volt::test('pages.people.create')
+        ->set('nric', '900101123456'); // Last digit is 6 (even)
+
+    $response->assertSet('gender', 'Female');
+
+    // Test with odd last digit (should be Male)
+    $response = Volt::test('pages.people.create')
+        ->set('nric', '900101123457'); // Last digit is 7 (odd)
+
+    $response->assertSet('gender', 'Male');
+});

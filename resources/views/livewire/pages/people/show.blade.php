@@ -65,7 +65,10 @@ new class extends Component {
 
     public function downloadDocument(Document $document)
     {
-        if (!$document->is_public && $document->person->user_id !== Auth::id()) {
+        $user = Auth::user();
+        
+        // Allow if document is public, user owns the person, or user is admin
+        if (!$document->is_public && $document->person->user_id !== $user->id && !$user->isAdmin()) {
             abort(403);
         }
 
@@ -152,7 +155,7 @@ new class extends Component {
 
                 <div class="space-y-2 sm:space-y-3">
                     @forelse ($person->documents as $document)
-                        @if ($document->is_public || $person->user_id === Auth::id())
+                        @if ($document->is_public || $person->user_id === Auth::id() || Auth::user()->isAdmin())
                             <div class="group rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3 sm:p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="flex items-start gap-3 flex-1 min-w-0">
@@ -173,6 +176,11 @@ new class extends Component {
                                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $document->is_public ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-400' }}">
                                                     {{ $document->is_public ? __('Public') : __('Private') }}
                                                 </span>
+                                                @if (!$document->is_public && Auth::user()->isAdmin() && $person->user_id !== Auth::id())
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                                                        {{ __('Admin View') }}
+                                                    </span>
+                                                @endif
                                             </div>
                                         </div>
                                     </div>

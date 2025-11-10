@@ -64,7 +64,7 @@ $people = computed(function () {
                             </div>
                             <div class="flex-1 min-w-0">
                                 <flux:heading size="base" class="font-bold text-neutral-900 dark:text-neutral-100 mb-1.5 truncate">
-                                    {{ $person->name }}
+                                    {{ ucwords(strtolower($person->name)) }}
                                 </flux:heading>
                                 <div class="space-y-1.5">
                                     @if($person->email)
@@ -87,7 +87,7 @@ $people = computed(function () {
                                         <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                                         </svg>
-                                        <span>{{ __('Created by') }} {{ $person->user->name }}</span>
+                                        <span>{{ __('Created by') }} {{ ucwords(strtolower($person->user->name)) }}</span>
                                     </div>
                                 </div>
                             </div>

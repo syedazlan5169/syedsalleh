@@ -17,7 +17,8 @@
                     <flux:navlist.item icon="users" :href="route('people.index')" :current="request()->routeIs('people.*')" wire:navigate>{{ __('My People') }}</flux:navlist.item>
                     <flux:navlist.item icon="magnifying-glass" :href="route('people.all')" :current="request()->routeIs('people.all')" wire:navigate>{{ __('All People') }}</flux:navlist.item>
                     @if(auth()->user()->isAdmin())
-                        <flux:navlist.item icon="shield-check" :href="route('admin.users')" :current="request()->routeIs('admin.*')" wire:navigate>{{ __('User Approvals') }}</flux:navlist.item>
+                        <flux:navlist.item icon="shield-check" :href="route('admin.users')" :current="request()->routeIs('admin.users')" wire:navigate>{{ __('User Approvals') }}</flux:navlist.item>
+                        <flux:navlist.item icon="light-bulb" :href="route('admin.suggestions')" :current="request()->routeIs('admin.suggestions')" wire:navigate>{{ __('Suggestions') }}</flux:navlist.item>
                     @endif
                 </flux:navlist.group>
             </flux:navlist>

@@ -36,6 +36,9 @@ Route::middleware(['auth', 'approved'])->group(function () {
     Volt::route('people/{person}/edit', 'pages.people.edit')->name('people.edit');
     Volt::route('people/{person}', 'pages.people.show')->name('people.show');
     Volt::route('people-all', 'pages.people.all')->name('people.all');
+
+    // Suggestions routes
+    Volt::route('suggestions/create', 'pages.suggestions.create')->name('suggestions.create');
 });
 
 // Approval pending page (accessible without approval)
@@ -46,4 +49,5 @@ Route::middleware(['auth'])->group(function () {
 // Admin routes (only for admins)
 Route::middleware(['auth', 'approved'])->group(function () {
     Volt::route('admin/users', 'pages.admin.users')->name('admin.users');
+    Volt::route('admin/suggestions', 'pages.admin.suggestions')->name('admin.suggestions');
 });

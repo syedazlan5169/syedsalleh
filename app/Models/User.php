@@ -75,6 +75,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the suggestions that belong to the user.
+     */
+    public function suggestions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\Suggestion::class);
+    }
+
+    /**
      * Check if the user is an admin.
      */
     public function isAdmin(): bool

@@ -31,8 +31,8 @@ new class extends Component
         $nric = preg_replace('/[-\s]/', '', $value);
 
         // Malaysian NRIC format: YYMMDD-PB-G### (12 digits)
-        // First 6 digits: YYMMDD, 8th digit (index 7): gender indicator
-        if (strlen($nric) >= 8 && ctype_digit($nric)) {
+        // First 6 digits: YYMMDD, last digit: gender indicator
+        if (strlen($nric) >= 6 && ctype_digit($nric)) {
             // Extract date of birth (first 6 digits: YYMMDD)
             $yy = (int) substr($nric, 0, 2);
             $mm = substr($nric, 2, 2);
@@ -46,9 +46,9 @@ new class extends Component
                 $this->date_of_birth = sprintf('%04d-%02d-%02d', $year, (int) $mm, (int) $dd);
             }
 
-            // Extract gender from 8th digit (index 7): even = Male, odd = Female
-            $genderDigit = (int) substr($nric, 7, 1);
-            $this->gender = ($genderDigit % 2 === 0) ? 'Male' : 'Female';
+            // Extract gender from last digit: even = Female, odd = Male
+            $lastDigit = (int) substr($nric, -1);
+            $this->gender = ($lastDigit % 2 === 0) ? 'Female' : 'Male';
         }
     }
 

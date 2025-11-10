@@ -65,7 +65,10 @@ new class extends Component {
 
     public function downloadDocument(Document $document)
     {
-        if (!$document->is_public && $document->person->user_id !== Auth::id()) {
+        $user = Auth::user();
+        
+        // Allow if document is public, user owns the person, or user is admin
+        if (!$document->is_public && $document->person->user_id !== $user->id && !$user->isAdmin()) {
             abort(403);
         }
 
@@ -80,7 +83,7 @@ new class extends Component {
                 <div class="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg sm:text-xl">
                     {{ strtoupper(substr($person->name, 0, 1)) }}
                 </div>
-                <h1 class="text-lg sm:text-xl font-bold text-neutral-900 dark:text-neutral-100 truncate">{{ $person->name }}</h1>
+                <h1 class="text-lg sm:text-xl font-bold text-neutral-900 dark:text-neutral-100 truncate">{{ ucwords(strtolower($person->name)) }}</h1>
             </div>
             @if ($person->user_id === Auth::id())
                 <flux:button href="{{ route('people.edit', $person) }}" variant="ghost" size="sm" class="text-sm sm:text-base">
@@ -106,18 +109,18 @@ new class extends Component {
                     </div>
                     <div class="pb-4 border-b border-neutral-100 dark:border-neutral-800 last:border-0 last:pb-0">
                         <flux:text class="text-xs sm:text-sm font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-1.5">{{ __('Gender') }}</flux:text>
-                        <flux:text class="text-sm sm:text-base text-neutral-900 dark:text-neutral-100 font-medium">{{ $person->gender }}</flux:text>
+                        <flux:text class="text-sm sm:text-base text-neutral-900 dark:text-neutral-100 font-medium">{{ ucwords(strtolower($person->gender)) }}</flux:text>
                     </div>
                     @if($person->occupation)
                         <div class="pb-4 border-b border-neutral-100 dark:border-neutral-800 last:border-0 last:pb-0">
                             <flux:text class="text-xs sm:text-sm font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-1.5">{{ __('Occupation') }}</flux:text>
-                            <flux:text class="text-sm sm:text-base text-neutral-900 dark:text-neutral-100 font-medium">{{ $person->occupation }}</flux:text>
+                            <flux:text class="text-sm sm:text-base text-neutral-900 dark:text-neutral-100 font-medium">{{ ucwords(strtolower($person->occupation)) }}</flux:text>
                         </div>
                     @endif
                     @if($person->address)
                         <div class="pb-4 border-b border-neutral-100 dark:border-neutral-800 last:border-0 last:pb-0">
                             <flux:text class="text-xs sm:text-sm font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-1.5">{{ __('Address') }}</flux:text>
-                            <flux:text class="text-sm sm:text-base text-neutral-900 dark:text-neutral-100 font-medium">{{ $person->address }}</flux:text>
+                            <flux:text class="text-sm sm:text-base text-neutral-900 dark:text-neutral-100 font-medium">{{ ucwords(strtolower($person->address)) }}</flux:text>
                         </div>
                     @endif
                     @if($person->phone)
@@ -152,7 +155,7 @@ new class extends Component {
 
                 <div class="space-y-2 sm:space-y-3">
                     @forelse ($person->documents as $document)
-                        @if ($document->is_public || $person->user_id === Auth::id())
+                        @if ($document->is_public || $person->user_id === Auth::id() || Auth::user()->isAdmin())
                             <div class="group rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3 sm:p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="flex items-start gap-3 flex-1 min-w-0">
@@ -168,11 +171,16 @@ new class extends Component {
                                             @endif
                                         </div>
                                         <div class="flex-1 min-w-0">
-                                            <flux:text class="text-sm sm:text-base font-semibold text-neutral-900 dark:text-neutral-100 truncate block">{{ $document->name }}</flux:text>
+                                            <flux:text class="text-sm sm:text-base font-semibold text-neutral-900 dark:text-neutral-100 truncate block">{{ ucwords(strtolower($document->name)) }}</flux:text>
                                             <div class="flex items-center gap-2 mt-1">
                                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $document->is_public ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-400' }}">
                                                     {{ $document->is_public ? __('Public') : __('Private') }}
                                                 </span>
+                                                @if (!$document->is_public && Auth::user()->isAdmin() && $person->user_id !== Auth::id())
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                                                        {{ __('Admin View') }}
+                                                    </span>
+                                                @endif
                                             </div>
                                         </div>
                                     </div>

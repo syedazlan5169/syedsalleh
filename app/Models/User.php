@@ -23,6 +23,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'is_admin',
+        'approved_at',
     ];
 
     /**
@@ -46,7 +48,9 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'approved_at' => 'datetime',
             'password' => 'hashed',
+            'is_admin' => 'boolean',
         ];
     }
 
@@ -68,5 +72,29 @@ class User extends Authenticatable
     public function people(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(\App\Models\Person::class);
+    }
+
+    /**
+     * Get the suggestions that belong to the user.
+     */
+    public function suggestions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\Suggestion::class);
+    }
+
+    /**
+     * Check if the user is an admin.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->is_admin === true;
+    }
+
+    /**
+     * Check if the user is approved.
+     */
+    public function isApproved(): bool
+    {
+        return $this->approved_at !== null;
     }
 }

@@ -39,6 +39,9 @@ Route::middleware(['auth', 'approved'])->group(function () {
 
     // Suggestions routes
     Volt::route('suggestions/create', 'pages.suggestions.create')->name('suggestions.create');
+
+    // Statistics route
+    Volt::route('statistics', 'pages.statistics')->name('statistics');
 });
 
 // Approval pending page (accessible without approval)

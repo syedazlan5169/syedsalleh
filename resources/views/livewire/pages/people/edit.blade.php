@@ -5,23 +5,32 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Volt\Component;
 
-new class extends Component {
+new class extends Component
+{
     public Person $person;
-    
+
     public string $name = '';
+
     public string $nric = '';
+
     public string $date_of_birth = '';
+
     public string $gender = 'Male';
+
     public string $blood_type = '';
+
     public string $occupation = '';
+
     public string $address = '';
+
     public string $phone = '';
+
     public string $email = '';
 
     public function mount(Person $person): void
     {
         abort_unless($person->user_id === Auth::id(), 403);
-        
+
         $this->person = $person;
         $this->name = $person->name;
         $this->nric = $person->nric;
@@ -88,7 +97,17 @@ new class extends Component {
                         </flux:select>
                     </div>
                     
-                    <flux:input wire:model="blood_type" :label="__('Blood Type')" type="text" placeholder="e.g., A+, B-, O+, AB+" class="text-base" />
+                    <flux:select wire:model="blood_type" :label="__('Blood Type')" class="text-base">
+                        <option value="">{{ __('Select blood type') }}</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                    </flux:select>
                     
                     <flux:input wire:model="occupation" :label="__('Occupation')" type="text" class="text-base" />
                     

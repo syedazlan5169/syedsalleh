@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,6 +24,7 @@ class Person extends Model
         'nric',
         'date_of_birth',
         'gender',
+        'blood_type',
         'occupation',
         'address',
         'phone',
@@ -141,5 +143,24 @@ class Person extends Model
     public function getDaysUntilBirthdayAttribute(): int
     {
         return now()->diffInDays($this->next_birthday, false);
+    }
+
+    /**
+     * Get the age breakdown in years and months.
+     *
+     * @return array{years:int|null,months:int|null}
+     */
+    public function getAgeBreakdownAttribute(): array
+    {
+        if (! $this->date_of_birth instanceof Carbon) {
+            return ['years' => null, 'months' => null];
+        }
+
+        $diff = $this->date_of_birth->diff(now());
+
+        return [
+            'years' => $diff->y,
+            'months' => $diff->m,
+        ];
     }
 }

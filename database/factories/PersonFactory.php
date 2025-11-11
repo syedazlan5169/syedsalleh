@@ -23,6 +23,7 @@ class PersonFactory extends Factory
             'nric' => fake()->unique()->numerify('##########'),
             'date_of_birth' => fake()->date(),
             'gender' => fake()->randomElement(['Male', 'Female']),
+            'blood_type' => fake()->optional()->randomElement(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']),
             'occupation' => fake()->jobTitle(),
             'address' => fake()->address(),
             'phone' => fake()->phoneNumber(),

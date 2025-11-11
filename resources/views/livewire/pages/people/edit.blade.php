@@ -12,6 +12,7 @@ new class extends Component {
     public string $nric = '';
     public string $date_of_birth = '';
     public string $gender = 'Male';
+    public string $blood_type = '';
     public string $occupation = '';
     public string $address = '';
     public string $phone = '';
@@ -26,6 +27,7 @@ new class extends Component {
         $this->nric = $person->nric;
         $this->date_of_birth = $person->date_of_birth->format('Y-m-d');
         $this->gender = $person->gender;
+        $this->blood_type = $person->blood_type ?? '';
         $this->occupation = $person->occupation ?? '';
         $this->address = $person->address ?? '';
         $this->phone = $person->phone ?? '';
@@ -39,6 +41,7 @@ new class extends Component {
             'nric' => ['required', 'string', 'max:255', Rule::unique('people')->ignore($this->person->id)],
             'date_of_birth' => ['required', 'date'],
             'gender' => ['required', 'string', 'in:Male,Female'],
+            'blood_type' => ['nullable', 'string', 'max:10'],
             'occupation' => ['nullable', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:500'],
             'phone' => ['nullable', 'string', 'max:20'],
@@ -46,6 +49,7 @@ new class extends Component {
         ]);
 
         // Convert empty strings to null for optional fields
+        $validated['blood_type'] = empty($validated['blood_type']) ? null : $validated['blood_type'];
         $validated['occupation'] = empty($validated['occupation']) ? null : $validated['occupation'];
         $validated['address'] = empty($validated['address']) ? null : $validated['address'];
         $validated['phone'] = empty($validated['phone']) ? null : $validated['phone'];
@@ -83,6 +87,8 @@ new class extends Component {
                             <option value="Female">{{ __('Female') }}</option>
                         </flux:select>
                     </div>
+                    
+                    <flux:input wire:model="blood_type" :label="__('Blood Type')" type="text" placeholder="e.g., A+, B-, O+, AB+" class="text-base" />
                     
                     <flux:input wire:model="occupation" :label="__('Occupation')" type="text" class="text-base" />
                     

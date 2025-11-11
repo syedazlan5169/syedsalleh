@@ -23,6 +23,7 @@ class Person extends Model
         'nric',
         'date_of_birth',
         'gender',
+        'blood_type',
         'occupation',
         'address',
         'phone',

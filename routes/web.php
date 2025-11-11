@@ -53,4 +53,5 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'approved'])->group(function () {
     Volt::route('admin/users', 'pages.admin.users')->name('admin.users');
     Volt::route('admin/suggestions', 'pages.admin.suggestions')->name('admin.suggestions');
+    Volt::route('admin/activity', 'pages.admin.activity')->name('admin.activity');
 });

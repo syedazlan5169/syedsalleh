@@ -20,6 +20,7 @@
                     @if(auth()->user()->isAdmin())
                         <flux:navlist.item icon="shield-check" :href="route('admin.users')" :current="request()->routeIs('admin.users')" wire:navigate>{{ __('User Approvals') }}</flux:navlist.item>
                         <flux:navlist.item icon="light-bulb" :href="route('admin.suggestions')" :current="request()->routeIs('admin.suggestions')" wire:navigate>{{ __('Suggestions') }}</flux:navlist.item>
+                        <flux:navlist.item icon="clock" :href="route('admin.activity')" :current="request()->routeIs('admin.activity')" wire:navigate>{{ __('Activity Log') }}</flux:navlist.item>
                     @endif
                 </flux:navlist.group>
             </flux:navlist>

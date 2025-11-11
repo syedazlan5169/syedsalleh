@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Person;
+use App\Support\ActivityLogger;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Volt\Component;
@@ -65,6 +66,12 @@ new class extends Component
         $validated['email'] = empty($validated['email']) ? null : $validated['email'];
 
         $this->person->update($validated);
+
+        ActivityLogger::log(
+            'person.updated',
+            __('Updated person :name', ['name' => $this->person->name]),
+            $this->person
+        );
 
         $this->redirect(route('people.index'), navigate: true);
     }

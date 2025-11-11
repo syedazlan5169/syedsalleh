@@ -1,12 +1,19 @@
 <?php
 
 use App\Models\Person;
+use App\Support\ActivityLogger;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 
 new class extends Component {
     public function delete(Person $person): void
     {
+        ActivityLogger::log(
+            'person.deleted',
+            __('Deleted person :name', ['name' => $person->name]),
+            $person
+        );
+
         $person->delete();
     }
 }; ?>

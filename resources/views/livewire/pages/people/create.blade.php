@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\ActivityLogger;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 
@@ -76,6 +77,12 @@ new class extends Component
         $validated['email'] = empty($validated['email']) ? null : $validated['email'];
 
         $person = Auth::user()->people()->create($validated);
+
+        ActivityLogger::log(
+            'person.created',
+            __('Created person :name', ['name' => $person->name]),
+            $person
+        );
 
         $this->redirect(route('people.index'), navigate: true);
     }

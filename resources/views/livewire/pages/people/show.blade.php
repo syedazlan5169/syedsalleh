@@ -2,17 +2,22 @@
 
 use App\Models\Document;
 use App\Models\Person;
+use App\Support\ActivityLogger;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
 
-new class extends Component {
+new class extends Component
+{
     use WithFileUploads;
 
     public Person $person;
+
     public $file = null;
+
     public string $document_name = '';
+
     public bool $is_public = false;
 
     public function mount(Person $person): void
@@ -30,7 +35,7 @@ new class extends Component {
 
         $path = $this->file->store('documents', 'public');
 
-        $this->person->documents()->create([
+        $document = $this->person->documents()->create([
             'name' => $validated['document_name'],
             'file_path' => $path,
             'original_name' => $this->file->getClientOriginalName(),
@@ -39,25 +44,55 @@ new class extends Component {
             'is_public' => $validated['is_public'] ?? false,
         ]);
 
+        ActivityLogger::log(
+            'document.uploaded',
+            __('Uploaded document :name for :person', [
+                'name' => $document->name,
+                'person' => $this->person->name,
+            ]),
+            $document,
+            ['person_id' => $this->person->id]
+        );
+
         $this->file = null;
         $this->document_name = '';
         $this->is_public = false;
-        
+
         $this->person->refresh();
     }
 
     public function toggleDocumentVisibility(Document $document): void
     {
         abort_unless($document->person->user_id === Auth::id(), 403);
-        
-        $document->update(['is_public' => !$document->is_public]);
+
+        $document->update(['is_public' => ! $document->is_public]);
+        ActivityLogger::log(
+            'document.visibility_toggled',
+            __('Toggled document visibility for :name', ['name' => $document->name]),
+            $document,
+            [
+                'person_id' => $this->person->id,
+                'is_public' => $document->is_public,
+            ]
+        );
         $this->person->refresh();
     }
 
     public function deleteDocument(Document $document): void
     {
         abort_unless($document->person->user_id === Auth::id(), 403);
-        
+        ActivityLogger::log(
+            'document.deleted',
+            __('Deleted document :name for :person', [
+                'name' => $document->name,
+                'person' => $this->person->name,
+            ]),
+            $document,
+            [
+                'person_id' => $this->person->id,
+            ]
+        );
+
         Storage::disk('public')->delete($document->file_path);
         $document->delete();
         $this->person->refresh();
@@ -66,9 +101,9 @@ new class extends Component {
     public function downloadDocument(Document $document)
     {
         $user = Auth::user();
-        
+
         // Allow if document is public, user owns the person, or user is admin
-        if (!$document->is_public && $document->person->user_id !== $user->id && !$user->isAdmin()) {
+        if (! $document->is_public && $document->person->user_id !== $user->id && ! $user->isAdmin()) {
             abort(403);
         }
 

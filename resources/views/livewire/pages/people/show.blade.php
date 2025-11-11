@@ -111,6 +111,21 @@ new class extends Component {
                         <flux:text class="text-xs sm:text-sm font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-1.5">{{ __('Gender') }}</flux:text>
                         <flux:text class="text-sm sm:text-base text-neutral-900 dark:text-neutral-100 font-medium">{{ ucwords(strtolower($person->gender)) }}</flux:text>
                     </div>
+                    @php($ageBreakdown = $person->age_breakdown)
+                    @if(!is_null($ageBreakdown['years']))
+                        <div class="pb-4 border-b border-neutral-100 dark:border-neutral-800 last:border-0 last:pb-0">
+                            <flux:text class="text-xs sm:text-sm font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-1.5">{{ __('Age') }}</flux:text>
+                            <flux:text class="text-sm sm:text-base text-neutral-900 dark:text-neutral-100 font-medium">
+                                {{ $ageBreakdown['years'] }}
+                                {{ $ageBreakdown['years'] === 1 ? __('year') : __('years') }}
+                                @if($ageBreakdown['months'] > 0)
+                                    {{ __('and') }}
+                                    {{ $ageBreakdown['months'] }}
+                                    {{ $ageBreakdown['months'] === 1 ? __('month') : __('months') }}
+                                @endif
+                            </flux:text>
+                        </div>
+                    @endif
                     @if($person->blood_type)
                         <div class="pb-4 border-b border-neutral-100 dark:border-neutral-800 last:border-0 last:pb-0">
                             <flux:text class="text-xs sm:text-sm font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-1.5">{{ __('Blood Type') }}</flux:text>

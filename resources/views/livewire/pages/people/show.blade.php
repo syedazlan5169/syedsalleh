@@ -24,7 +24,7 @@ new class extends Component {
     {
         $validated = $this->validate([
             'document_name' => ['required', 'string', 'max:255'],
-            'file' => ['required', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,gif,webp'],
+            'file' => ['required', 'file', 'max:5120', 'mimes:pdf,jpg,jpeg,png,gif,webp'],
             'is_public' => ['boolean'],
         ]);
 

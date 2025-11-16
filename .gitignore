@@ -1,23 +1,48 @@
-/.phpunit.cache
-/node_modules
-/public/build
-/public/hot
-/public/storage
-/storage/*.key
-/storage/pail
-/vendor
+# --- PHPUnit cache (anywhere, including backend/) ---
+.phpunit.cache
+.phpunit.result.cache
+
+# --- Dependencies (anywhere) ---
+vendor/
+node_modules/
+
+# --- Laravel env & config ---
 .env
 .env.backup
 .env.production
+.env.*          # ignore other env variants
 .phpactor.json
-.phpunit.result.cache
+
+# --- Laravel storage & public build (backend app) ---
+backend/public/build
+backend/public/hot
+backend/public/storage
+
+backend/storage/*.key
+backend/storage/pail
+backend/storage/framework/*
+backend/storage/logs/*
+
+# --- Homestead / local dev ---
 Homestead.json
 Homestead.yaml
+
+# --- NPM / Yarn log files ---
 npm-debug.log
 yarn-error.log
+
+# --- Auth / private config ---
 /auth.json
-/.fleet
-/.idea
-/.nova
-/.vscode
-/.zed
+
+# --- IDE / editor folders ---
+.fleet
+.idea
+.nova
+.vscode
+.zed
+
+# --- (Optional) future mobile app ignores ---
+mobile/.expo/
+mobile/.expo-shared/
+mobile/dist/
+mobile/web-build/

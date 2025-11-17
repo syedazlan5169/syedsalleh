@@ -42,7 +42,7 @@ yarn-error.log
 .zed
 
 # --- (Optional) future mobile app ignores ---
-mobile/.expo/
-mobile/.expo-shared/
-mobile/dist/
-mobile/web-build/
+#mobile/.expo/
+#mobile/.expo-shared/
+#mobile/dist/
+#mobile/web-build/

@@ -1,10 +1,15 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect, useRef } from 'react';
 import 'react-native-reanimated';
 
-import { AuthProvider } from '../context/AuthContext';
+import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ThemePreferenceProvider, useThemePreference } from '../context/ThemePreferenceContext';
+import {
+  addNotificationResponseReceivedListener,
+  registerForPushNotifications,
+} from '../services/notifications';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -23,6 +28,7 @@ function RootLayoutInner() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
+        <NotificationHandler />
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="people/my" options={{ title: 'My People' }} />
@@ -30,10 +36,52 @@ function RootLayoutInner() {
           <Stack.Screen name="people/create" options={{ title: 'Add Person' }} />
           <Stack.Screen name="people/[id]" options={{ title: 'Person Detail' }} />
           <Stack.Screen name="people/[id]/edit" options={{ title: 'Edit Person' }} />
+          <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>
       </AuthProvider>
       <StatusBar style="auto" />
     </ThemeProvider>
   );
+}
+
+function NotificationHandler() {
+  const { token } = useAuth();
+  const router = useRouter();
+  const segments = useSegments();
+  const notificationListener = useRef<any>(null);
+  const responseListener = useRef<any>(null);
+
+  useEffect(() => {
+    if (token) {
+      // Register for push notifications when user is logged in
+      registerForPushNotifications(token);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    // Handle notification taps
+    responseListener.current = addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data;
+      
+      if (data?.type === 'person_created' && data?.person_id) {
+        // Navigate to person detail if app is open
+        const currentSegments = segments;
+        if (currentSegments.length > 0) {
+          router.push({
+            pathname: '/people/[id]',
+            params: { id: String(data.person_id) },
+          });
+        }
+      }
+    });
+
+    return () => {
+      if (responseListener.current) {
+        responseListener.current.remove();
+      }
+    };
+  }, [router, segments]);
+
+  return null;
 }

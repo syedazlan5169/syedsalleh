@@ -92,6 +92,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the device tokens for the user.
+     */
+    public function deviceTokens(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\DeviceToken::class);
+    }
+
+    /**
      * Check if the user is an admin.
      */
     public function isAdmin(): bool

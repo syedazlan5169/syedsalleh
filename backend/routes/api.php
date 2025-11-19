@@ -1,12 +1,14 @@
 <?php
 
 use App\Http\Requests\StoreDocumentRequest;
+use App\Models\DeviceToken;
 use App\Models\Document;
 use App\Models\Notification;
 use App\Models\User;
 use App\Models\Person;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -34,6 +36,59 @@ if (! function_exists('map_document_response')) {
             'created_at' => optional($document->created_at)->toDateTimeString(),
             'updated_at' => optional($document->updated_at)->toDateTimeString(),
         ];
+    }
+}
+
+if (! function_exists('send_push_notification')) {
+    /**
+     * Send push notification via Expo Push Notification service
+     *
+     * @param  array<string>  $tokens  Array of Expo push tokens
+     * @param  string  $title  Notification title
+     * @param  string  $body  Notification body
+     * @param  array<string, mixed>  $data  Additional data to send with notification
+     * @return array<string, mixed>|null
+     */
+    function send_push_notification(array $tokens, string $title, string $body, array $data = []): ?array
+    {
+        if (empty($tokens)) {
+            return null;
+        }
+
+        $expoAccessToken = env('EXPO_ACCESS_TOKEN');
+        $expoApiUrl = 'https://exp.host/--/api/v2/push/send';
+
+        $messages = [];
+        foreach ($tokens as $token) {
+            $messages[] = [
+                'to' => $token,
+                'sound' => 'default',
+                'title' => $title,
+                'body' => $body,
+                'data' => $data,
+            ];
+        }
+
+        $headers = [
+            'Accept' => 'application/json',
+            'Accept-Encoding' => 'gzip, deflate',
+            'Content-Type' => 'application/json',
+        ];
+
+        if ($expoAccessToken) {
+            $headers['Authorization'] = 'Bearer '.$expoAccessToken;
+        }
+
+        try {
+            $response = Http::withHeaders($headers)
+                ->post($expoApiUrl, $messages);
+
+            return $response->json();
+        } catch (\Exception $e) {
+            \Log::error('Push notification error: '.$e->getMessage());
+
+            return null;
+        }
     }
 }
 
@@ -201,6 +256,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Create notifications for all users
         $allUsers = User::all();
         $notifications = [];
+        $pushTokens = [];
         foreach ($allUsers as $targetUser) {
             $notifications[] = [
                 'user_id' => $targetUser->id,
@@ -212,8 +268,25 @@ Route::middleware('auth:sanctum')->group(function () {
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
+
+            // Collect push tokens for this user
+            $userTokens = $targetUser->deviceTokens()->pluck('token')->toArray();
+            $pushTokens = array_merge($pushTokens, $userTokens);
         }
         Notification::insert($notifications);
+
+        // Send push notifications
+        if (! empty($pushTokens)) {
+            send_push_notification(
+                $pushTokens,
+                'New Person Added',
+                "{$user->name} added a new person: {$person->name}",
+                [
+                    'type' => 'person_created',
+                    'person_id' => $person->id,
+                ]
+            );
+        }
 
         return response()->json([
             'person' => [
@@ -477,6 +550,46 @@ Route::middleware('auth:sanctum')->group(function () {
         return response()->json([
             'message' => 'All notifications marked as read.',
         ]);
+    });
+
+    Route::post('/device-tokens', function (Request $request) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $data = $request->validate([
+            'token' => ['required', 'string'],
+            'platform' => ['nullable', 'string', 'in:ios,android,web'],
+        ]);
+
+        $deviceToken = DeviceToken::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'token' => $data['token'],
+            ],
+            [
+                'platform' => $data['platform'] ?? null,
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Device token registered successfully.',
+            'device_token' => [
+                'id' => $deviceToken->id,
+                'token' => $deviceToken->token,
+                'platform' => $deviceToken->platform,
+            ],
+        ], 201);
+    });
+
+    Route::delete('/device-tokens/{token}', function (Request $request, string $token) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        DeviceToken::where('user_id', $user->id)
+            ->where('token', $token)
+            ->delete();
+
+        return response()->noContent();
     });
 });
 

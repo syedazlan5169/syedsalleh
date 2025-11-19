@@ -229,15 +229,8 @@ export default function HomeScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.toggleRow}>
-          <ThemeToggle />
-        </View>
         <View style={styles.heroCard}>
-          <Text style={styles.heroEyebrow}>Dashboard</Text>
           <Text style={styles.heroTitle}>Welcome back, {heroName || user.name}</Text>
-          <Text style={styles.heroSubtitle}>
-            Stay informed about your people and upcoming engagements.
-          </Text>
 
           <View style={styles.heroActions}>
             <TouchableOpacity
@@ -582,4 +575,5 @@ const createStyles = (palette: Palette) =>
       alignItems: 'flex-end',
       marginBottom: 16,
     },
+    // toggleRow is still used in login screen
   });

@@ -22,6 +22,7 @@ type AuthContextValue = {
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   logout: () => void;
   getRememberedEmail: () => Promise<string | null>;
+  updateUser: (user: User) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -115,6 +116,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
+  // Update user data
+  const updateUser = useCallback((updatedUser: User) => {
+    setUser(updatedUser);
+    // Update saved user data if it exists
+    AsyncStorage.getItem(AUTH_USER_KEY).then((savedUser) => {
+      if (savedUser) {
+        AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(updatedUser));
+      }
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       token,
@@ -123,8 +135,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       login,
       logout,
       getRememberedEmail,
+      updateUser,
     }),
-    [token, user, isLoading, login, logout, getRememberedEmail],
+    [token, user, isLoading, login, logout, getRememberedEmail, updateUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

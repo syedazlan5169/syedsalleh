@@ -64,8 +64,8 @@ function NotificationHandler() {
     responseListener.current = addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data;
       
-      if (data?.type === 'person_created' && data?.person_id) {
-        // Navigate to person detail if app is open
+      if (data?.person_id) {
+        // Navigate to person detail if app is open (for both person_created and birthday_reminder)
         const currentSegments = segments;
         if (currentSegments.length > 0) {
           router.push({
@@ -73,6 +73,9 @@ function NotificationHandler() {
             params: { id: String(data.person_id) },
           });
         }
+      } else if (data?.type === 'birthday_reminder' && !data?.person_id) {
+        // If multiple birthdays, navigate to notifications screen
+        router.push('/notifications');
       }
     });
 

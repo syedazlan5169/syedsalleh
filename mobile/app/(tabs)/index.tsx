@@ -5,6 +5,7 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -27,12 +28,25 @@ export default function HomeScreen() {
   const styles = useMemo(() => createStyles(palette), [palette]);
 
   // --- Login state ---
-  const [email, setEmail] = useState('syedazlan5169@gmail.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [loadingLogin, setLoadingLogin] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
-  const { token, user, login, logout } = useAuth();
+  const { token, user, isLoading: authLoading, login, logout, getRememberedEmail } = useAuth();
+
+  // Load remembered email on mount
+  useEffect(() => {
+    const loadRememberedEmail = async () => {
+      const rememberedEmail = await getRememberedEmail();
+      if (rememberedEmail) {
+        setEmail(rememberedEmail);
+        setRememberMe(true);
+      }
+    };
+    loadRememberedEmail();
+  }, [getRememberedEmail]);
 
   // --- Dashboard state ---
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
@@ -51,7 +65,7 @@ export default function HomeScreen() {
     setLoadingLogin(true);
 
     try {
-      await login(email, password);
+      await login(email, password, rememberMe);
       setPassword('');
       setDashboard(null);
       setDashError(null);
@@ -135,6 +149,17 @@ export default function HomeScreen() {
     };
   }, [token]);
 
+  if (authLoading) {
+    return (
+      <View style={[styles.centerScreen]}>
+        <ActivityIndicator size="large" color={palette.tint} />
+        <Text style={[styles.loadingText, { color: palette.textMuted }]}>
+          Loading…
+        </Text>
+      </View>
+    );
+  }
+
   if (!token || !user) {
     return (
       <KeyboardAvoidingView
@@ -173,6 +198,18 @@ export default function HomeScreen() {
             value={password}
             onChangeText={setPassword}
           />
+
+          <View style={styles.rememberMeRow}>
+            <Text style={[styles.rememberMeLabel, { color: palette.text }]}>
+              Remember me
+            </Text>
+            <Switch
+              value={rememberMe}
+              onValueChange={setRememberMe}
+              trackColor={{ false: palette.border, true: palette.tint }}
+              thumbColor={rememberMe ? palette.tint : '#fff'}
+            />
+          </View>
 
           {loginError && <Text style={styles.errorText}>{loginError}</Text>}
 
@@ -576,6 +613,16 @@ const createStyles = (palette: Palette) =>
       paddingVertical: 12,
       color: palette.text,
       backgroundColor: palette.surface,
+    },
+    rememberMeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 16,
+    },
+    rememberMeLabel: {
+      fontSize: 14,
+      fontWeight: '500',
     },
     toggleRow: {
       flexDirection: 'row',

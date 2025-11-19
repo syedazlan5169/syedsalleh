@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { API_BASE_URL } from '../../apiConfig';
+import { API_BASE_URL } from '@/apiConfig';
 
 type PingResponse = {
   message: string;

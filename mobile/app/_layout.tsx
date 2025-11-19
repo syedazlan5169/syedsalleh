@@ -4,15 +4,22 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { AuthProvider } from '../context/AuthContext';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { ThemePreferenceProvider, useThemePreference } from '../context/ThemePreferenceContext';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  return (
+    <ThemePreferenceProvider>
+      <RootLayoutInner />
+    </ThemePreferenceProvider>
+  );
+}
 
+function RootLayoutInner() {
+  const { colorScheme } = useThemePreference();
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>

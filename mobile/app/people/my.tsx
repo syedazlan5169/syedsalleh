@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -11,11 +11,18 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
 
+import { Palette } from '@/constants/theme';
+import { useThemePalette } from '@/context/ThemePreferenceContext';
+import { getAvatarColors } from '@/utils/avatar';
+
 import { apiGet } from '../../apiClient';
 import { useAuth } from '../../context/AuthContext';
 import type { DashboardData, MyPerson } from '../../types/api';
 
 export default function MyPeopleScreen() {
+  const palette = useThemePalette();
+  const styles = useMemo(() => createStyles(palette), [palette]);
+
   const { token } = useAuth();
   const router = useRouter();
 
@@ -56,6 +63,9 @@ export default function MyPeopleScreen() {
       <Stack.Screen
         options={{
           title: 'My People',
+          headerStyle: { backgroundColor: palette.surface },
+          headerTitleStyle: { color: palette.text },
+          headerShadowVisible: false,
           headerRight: () => (
             <TouchableOpacity onPress={() => router.push('/people/create')}>
               <Text style={styles.headerAction}>+ Add</Text>
@@ -71,7 +81,7 @@ export default function MyPeopleScreen() {
       >
         {loading && people.length === 0 ? (
           <View style={styles.centered}>
-            <ActivityIndicator />
+            <ActivityIndicator color={palette.tint} />
             <Text style={styles.helperText}>Loading your people…</Text>
           </View>
         ) : error ? (
@@ -81,7 +91,9 @@ export default function MyPeopleScreen() {
             You haven&apos;t added anyone yet.
           </Text>
         ) : (
-          people.map((p) => (
+          people.map((p) => {
+            const { background, text } = getAvatarColors(p.gender, palette);
+            return (
             <TouchableOpacity
               key={p.id}
               activeOpacity={0.7}
@@ -90,8 +102,8 @@ export default function MyPeopleScreen() {
               }
             >
               <View style={styles.personCard}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
+                <View style={[styles.avatar, { backgroundColor: background }]}>
+                  <Text style={[styles.avatarText, { color: text }]}>
                     {p.name?.charAt(0).toUpperCase()}
                   </Text>
                 </View>
@@ -114,75 +126,81 @@ export default function MyPeopleScreen() {
                 </View>
               </View>
             </TouchableOpacity>
-          ))
+          );
+          })
         )}
       </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f4f4f5',
-  },
-  content: {
-    padding: 16,
-  },
-  centered: {
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  helperText: {
-    marginTop: 12,
-    color: '#6b7280',
-    textAlign: 'center',
-  },
-  errorText: {
-    marginTop: 12,
-    color: '#b91c1c',
-    textAlign: 'center',
-  },
-  personCard: {
-    flexDirection: 'row',
-    gap: 12,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: '#fff',
-    shadowColor: '#000000',
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 10,
-    elevation: 2,
-    marginBottom: 12,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#3b82f6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
-  },
-  personName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  personMeta: {
-    color: '#6b7280',
-    fontSize: 13,
-    marginTop: 2,
-  },
-  headerAction: {
-    color: '#2563eb',
-    fontWeight: '600',
-    marginRight: 8,
-  },
-});
+const createStyles = (palette: Palette) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: palette.background,
+    },
+    content: {
+      padding: 16,
+      gap: 12,
+    },
+    centered: {
+      alignItems: 'center',
+      marginTop: 24,
+    },
+    helperText: {
+      marginTop: 12,
+      color: palette.textMuted,
+      textAlign: 'center',
+    },
+    errorText: {
+      marginTop: 12,
+      color: palette.danger,
+      textAlign: 'center',
+    },
+    personCard: {
+      flexDirection: 'row',
+      gap: 12,
+      padding: 18,
+      borderRadius: 22,
+      backgroundColor: palette.elevated,
+      borderWidth: 1,
+      borderColor: palette.border,
+      shadowColor: palette.shadow,
+      shadowOpacity: 0.08,
+      shadowOffset: { width: 0, height: 8 },
+      shadowRadius: 12,
+      elevation: 3,
+      marginBottom: 8,
+    },
+    avatar: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: palette.tint,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarText: {
+      color: '#fff',
+      fontWeight: '700',
+      fontSize: 18,
+    },
+    personName: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: palette.text,
+    },
+    personMeta: {
+      color: palette.textMuted,
+      fontSize: 13,
+      marginTop: 2,
+    },
+    headerAction: {
+      color: palette.tint,
+      fontWeight: '700',
+      marginRight: 8,
+      fontSize: 15,
+    },
+  });
 

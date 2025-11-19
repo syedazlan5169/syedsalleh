@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+
+import { Palette } from '@/constants/theme';
+import { useThemePalette } from '@/context/ThemePreferenceContext';
 
 import { apiPost } from '../../apiClient';
 import { PersonForm, PersonFormValues, defaultPersonFormValues } from '../../components/people/PersonForm';
 import { useAuth } from '../../context/AuthContext';
 
 export default function CreatePersonScreen() {
+  const palette = useThemePalette();
+  const styles = useMemo(() => createStyles(palette), [palette]);
+
   const { token } = useAuth();
   const router = useRouter();
 
@@ -43,7 +49,14 @@ export default function CreatePersonScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Add Person' }} />
+      <Stack.Screen
+        options={{
+          title: 'Add Person',
+          headerStyle: { backgroundColor: palette.surface },
+          headerTitleStyle: { color: palette.text },
+          headerShadowVisible: false,
+        }}
+      />
       <ScrollView contentContainerStyle={styles.content}>
         {error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -58,18 +71,19 @@ export default function CreatePersonScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f4f4f5',
-  },
-  content: {
-    padding: 16,
-    gap: 16,
-  },
-  errorText: {
-    color: '#b91c1c',
-    textAlign: 'center',
-  },
-});
+const createStyles = (palette: Palette) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: palette.background,
+    },
+    content: {
+      padding: 20,
+      gap: 16,
+    },
+    errorText: {
+      color: palette.danger,
+      textAlign: 'center',
+    },
+  });
 

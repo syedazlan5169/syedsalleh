@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -11,6 +11,10 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
 
+import { Palette } from '@/constants/theme';
+import { useThemePalette } from '@/context/ThemePreferenceContext';
+import { getAvatarColors } from '@/utils/avatar';
+
 import { apiGet } from '../../apiClient';
 import { useAuth } from '../../context/AuthContext';
 import type { MyPerson } from '../../types/api';
@@ -20,6 +24,9 @@ type PeopleResponse = {
 };
 
 export default function AllPeopleScreen() {
+  const palette = useThemePalette();
+  const styles = useMemo(() => createStyles(palette), [palette]);
+
   const { token } = useAuth();
   const router = useRouter();
 
@@ -57,7 +64,14 @@ export default function AllPeopleScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: 'All People' }} />
+      <Stack.Screen
+        options={{
+          title: 'All People',
+          headerStyle: { backgroundColor: palette.surface },
+          headerTitleStyle: { color: palette.text },
+          headerShadowVisible: false,
+        }}
+      />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -66,7 +80,7 @@ export default function AllPeopleScreen() {
       >
         {loading && people.length === 0 ? (
           <View style={styles.centered}>
-            <ActivityIndicator />
+            <ActivityIndicator color={palette.tint} />
             <Text style={styles.helperText}>Loading people…</Text>
           </View>
         ) : error ? (
@@ -74,108 +88,115 @@ export default function AllPeopleScreen() {
         ) : people.length === 0 ? (
           <Text style={styles.helperText}>No people found.</Text>
         ) : (
-          people.map((p) => (
-            <TouchableOpacity
-              key={p.id}
-              activeOpacity={0.7}
-              onPress={() =>
-                router.push({ pathname: '/people/[id]', params: { id: String(p.id) } })
-              }
-            >
-              <View style={styles.personCard}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
-                    {p.name?.charAt(0).toUpperCase()}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.personName}>{p.name}</Text>
-                  <Text style={styles.personMeta}>{p.nric}</Text>
-                  {p.email && <Text style={styles.personMeta}>{p.email}</Text>}
-                  {p.phone && <Text style={styles.personMeta}>{p.phone}</Text>}
-                  {p.owner_name && (
-                    <Text style={styles.personMeta}>
-                      Created by {p.owner_name}
+          people.map((p) => {
+            const { background, text } = getAvatarColors(p.gender, palette);
+            return (
+              <TouchableOpacity
+                key={p.id}
+                activeOpacity={0.7}
+                onPress={() =>
+                  router.push({ pathname: '/people/[id]', params: { id: String(p.id) } })
+                }
+              >
+                <View style={styles.personCard}>
+                  <View style={[styles.avatar, { backgroundColor: background }]}>
+                    <Text style={[styles.avatarText, { color: text }]}>
+                      {p.name?.charAt(0).toUpperCase()}
                     </Text>
-                  )}
-                  {p.age_years !== null && (
-                    <Text style={styles.personMeta}>
-                      Age: {p.age_years}{' '}
-                      {p.age_years === 1 ? 'year' : 'years'}
-                      {p.age_months && p.age_months > 0
-                        ? ` and ${p.age_months} ${
-                            p.age_months === 1 ? 'month' : 'months'
-                          }`
-                        : ''}
-                    </Text>
-                  )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.personName}>{p.name}</Text>
+                    <Text style={styles.personMeta}>{p.nric}</Text>
+                    {p.email && <Text style={styles.personMeta}>{p.email}</Text>}
+                    {p.phone && <Text style={styles.personMeta}>{p.phone}</Text>}
+                    {p.owner_name && (
+                      <Text style={styles.personMeta}>
+                        Created by {p.owner_name}
+                      </Text>
+                    )}
+                    {p.age_years !== null && (
+                      <Text style={styles.personMeta}>
+                        Age: {p.age_years}{' '}
+                        {p.age_years === 1 ? 'year' : 'years'}
+                        {p.age_months && p.age_months > 0
+                          ? ` and ${p.age_months} ${
+                              p.age_months === 1 ? 'month' : 'months'
+                            }`
+                          : ''}
+                      </Text>
+                    )}
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))
+              </TouchableOpacity>
+            );
+          })
         )}
       </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f4f4f5',
-  },
-  content: {
-    padding: 16,
-  },
-  centered: {
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  helperText: {
-    marginTop: 12,
-    color: '#6b7280',
-    textAlign: 'center',
-  },
-  errorText: {
-    marginTop: 12,
-    color: '#b91c1c',
-    textAlign: 'center',
-  },
-  personCard: {
-    flexDirection: 'row',
-    gap: 12,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: '#fff',
-    shadowColor: '#000000',
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 10,
-    elevation: 2,
-    marginBottom: 12,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#6366f1',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
-  },
-  personName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  personMeta: {
-    color: '#6b7280',
-    fontSize: 13,
-    marginTop: 2,
-  },
-});
+const createStyles = (palette: Palette) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: palette.background,
+    },
+    content: {
+      padding: 16,
+      gap: 12,
+    },
+    centered: {
+      alignItems: 'center',
+      marginTop: 24,
+    },
+    helperText: {
+      marginTop: 12,
+      color: palette.textMuted,
+      textAlign: 'center',
+    },
+    errorText: {
+      marginTop: 12,
+      color: palette.danger,
+      textAlign: 'center',
+    },
+    personCard: {
+      flexDirection: 'row',
+      gap: 12,
+      padding: 18,
+      borderRadius: 22,
+      backgroundColor: palette.elevated,
+      borderWidth: 1,
+      borderColor: palette.border,
+      shadowColor: palette.shadow,
+      shadowOpacity: 0.08,
+      shadowOffset: { width: 0, height: 8 },
+      shadowRadius: 12,
+      elevation: 3,
+      marginBottom: 8,
+    },
+    avatar: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: palette.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarText: {
+      color: '#fff',
+      fontWeight: '700',
+      fontSize: 18,
+    },
+    personName: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: palette.text,
+    },
+    personMeta: {
+      color: palette.textMuted,
+      fontSize: 13,
+      marginTop: 2,
+    },
+  });
 

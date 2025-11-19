@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -7,6 +7,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
+import { Palette } from '@/constants/theme';
+import { useThemePalette } from '@/context/ThemePreferenceContext';
 
 export type PersonFormValues = {
   name: string;
@@ -45,6 +48,9 @@ export function PersonForm({
   submitLabel = 'Save',
   onSubmit,
 }: Props) {
+  const palette = useThemePalette();
+  const styles = useMemo(() => createStyles(palette), [palette]);
+
   const [values, setValues] = useState<PersonFormValues>(initialValues);
 
   useEffect(() => {
@@ -62,42 +68,49 @@ export function PersonForm({
   return (
     <View style={styles.form}>
       <FormField
+        palette={palette}
         label="Name"
         value={values.name}
         onChangeText={(text) => handleChange('name', text)}
         placeholder="Full name"
       />
       <FormField
+        palette={palette}
         label="NRIC"
         value={values.nric}
         onChangeText={(text) => handleChange('nric', text)}
         placeholder="NRIC"
       />
       <FormField
+        palette={palette}
         label="Date of Birth"
         value={values.date_of_birth}
         onChangeText={(text) => handleChange('date_of_birth', text)}
         placeholder="YYYY-MM-DD"
       />
       <FormField
+        palette={palette}
         label="Gender"
         value={values.gender}
         onChangeText={(text) => handleChange('gender', text)}
         placeholder="Gender"
       />
       <FormField
+        palette={palette}
         label="Blood Type"
         value={values.blood_type}
         onChangeText={(text) => handleChange('blood_type', text)}
         placeholder="Blood type"
       />
       <FormField
+        palette={palette}
         label="Occupation"
         value={values.occupation}
         onChangeText={(text) => handleChange('occupation', text)}
         placeholder="Occupation"
       />
       <FormField
+        palette={palette}
         label="Phone"
         value={values.phone}
         onChangeText={(text) => handleChange('phone', text)}
@@ -105,6 +118,7 @@ export function PersonForm({
         keyboardType="phone-pad"
       />
       <FormField
+        palette={palette}
         label="Email"
         value={values.email}
         onChangeText={(text) => handleChange('email', text)}
@@ -113,6 +127,7 @@ export function PersonForm({
         autoCapitalize="none"
       />
       <FormField
+        palette={palette}
         label="Address"
         value={values.address}
         onChangeText={(text) => handleChange('address', text)}
@@ -143,6 +158,7 @@ type FormFieldProps = {
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   multiline?: boolean;
+  palette: Palette;
 };
 
 const FormField = ({
@@ -153,14 +169,24 @@ const FormField = ({
   keyboardType = 'default',
   autoCapitalize = 'sentences',
   multiline = false,
+  palette,
 }: FormFieldProps) => (
-  <View style={styles.field}>
-    <Text style={styles.label}>{label}</Text>
+  <View style={fieldStyles.field}>
+    <Text style={[fieldStyles.label, { color: palette.textMuted }]}>{label}</Text>
     <TextInput
-      style={[styles.input, multiline && styles.inputMultiline]}
+      style={[
+        fieldStyles.input,
+        multiline && fieldStyles.inputMultiline,
+        {
+          borderColor: palette.border,
+          backgroundColor: palette.surface,
+          color: palette.text,
+        },
+      ]}
+      placeholder={placeholder}
+      placeholderTextColor={palette.textMuted}
       value={value}
       onChangeText={onChangeText}
-      placeholder={placeholder}
       keyboardType={keyboardType}
       autoCapitalize={autoCapitalize}
       multiline={multiline}
@@ -168,45 +194,47 @@ const FormField = ({
   </View>
 );
 
-const styles = StyleSheet.create({
-  form: {
-    gap: 16,
-  },
+const createStyles = (palette: Palette) =>
+  StyleSheet.create({
+    form: {
+      gap: 18,
+    },
+    submitButton: {
+      marginTop: 12,
+      backgroundColor: palette.tint,
+      paddingVertical: 16,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    submitButtonDisabled: {
+      opacity: 0.7,
+    },
+    submitButtonText: {
+      color: '#fff',
+      fontWeight: '600',
+      fontSize: 16,
+    },
+  });
+
+const fieldStyles = StyleSheet.create({
   field: {
-    gap: 6,
+    gap: 8,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontSize: 13,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#fff',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   inputMultiline: {
-    minHeight: 90,
+    minHeight: 100,
     textAlignVertical: 'top',
-  },
-  submitButton: {
-    marginTop: 12,
-    backgroundColor: '#2563eb',
-    paddingVertical: 14,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  submitButtonDisabled: {
-    opacity: 0.7,
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
   },
 });
 

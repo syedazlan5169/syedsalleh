@@ -1,6 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+
+import { Palette } from '@/constants/theme';
+import { useThemePalette } from '@/context/ThemePreferenceContext';
 
 import { apiGet, apiPut } from '../../../apiClient';
 import {
@@ -30,6 +33,9 @@ function mapPersonToFormValues(person: PersonDetail): PersonFormValues {
 }
 
 export default function EditPersonScreen() {
+  const palette = useThemePalette();
+  const styles = useMemo(() => createStyles(palette), [palette]);
+
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
   const { token } = useAuth();
@@ -95,7 +101,14 @@ export default function EditPersonScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Edit Person' }} />
+      <Stack.Screen
+        options={{
+          title: 'Edit Person',
+          headerStyle: { backgroundColor: palette.surface },
+          headerTitleStyle: { color: palette.text },
+          headerShadowVisible: false,
+        }}
+      />
       <ScrollView contentContainerStyle={styles.content}>
         {loading && !initialValues ? (
           <View style={styles.centered}>
@@ -119,27 +132,28 @@ export default function EditPersonScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f4f4f5',
-  },
-  content: {
-    padding: 16,
-    gap: 16,
-  },
-  centered: {
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  helperText: {
-    marginTop: 12,
-    color: '#6b7280',
-    textAlign: 'center',
-  },
-  errorText: {
-    color: '#b91c1c',
-    textAlign: 'center',
-  },
-});
+const createStyles = (palette: Palette) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: palette.background,
+    },
+    content: {
+      padding: 20,
+      gap: 16,
+    },
+    centered: {
+      alignItems: 'center',
+      marginTop: 24,
+    },
+    helperText: {
+      marginTop: 12,
+      color: palette.textMuted,
+      textAlign: 'center',
+    },
+    errorText: {
+      color: palette.danger,
+      textAlign: 'center',
+    },
+  });
 

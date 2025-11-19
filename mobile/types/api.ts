@@ -26,6 +26,7 @@ export type MyPerson = {
   nric: string;
   email: string | null;
   phone: string | null;
+  gender?: string | null;
   date_of_birth: string | null;
   age_years: number | null;
   age_months: number | null;

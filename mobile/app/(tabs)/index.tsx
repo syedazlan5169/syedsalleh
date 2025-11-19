@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -9,104 +9,110 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { API_BASE_URL } from '../../apiConfig';
+import { useRouter } from 'expo-router';
 
-type User = {
-  id: number;
-  name: string;
-  email: string;
-};
-
-type LoginState = {
-  token: string | null;
-  user: User | null;
-};
+import { apiGet } from '../../apiClient';
+import { useAuth } from '../../context/AuthContext';
+import type { DashboardData } from '../../types/api';
 
 export default function HomeScreen() {
+  const router = useRouter();
+
+  // --- Login state ---
   const [email, setEmail] = useState('syedazlan5169@gmail.com'); // prefill for dev
   const [password, setPassword] = useState('');
-  const [loginState, setLoginState] = useState<LoginState>({
-    token: null,
-    user: null,
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loadingLogin, setLoadingLogin] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
+  const { token, user, login, logout } = useAuth();
+
+  // --- Dashboard state ---
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [loadingDash, setLoadingDash] = useState(false);
+  const [dashError, setDashError] = useState<string | null>(null);
+
+  // --- Login handler ---
   const handleLogin = async () => {
-    setError(null);
+    setLoginError(null);
 
     if (!email || !password) {
-      setError('Please fill in both email and password.');
+      setLoginError('Please fill in both email and password.');
       return;
     }
 
-    setLoading(true);
+    setLoadingLogin(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      });
-
-      if (!response.ok) {
-        // Try to parse error message from backend
-        let message = `HTTP ${response.status}`;
-        try {
-          const errJson = await response.json();
-          if (errJson?.message) {
-            message = errJson.message;
-          }
-        } catch {
-          // ignore JSON parse error, keep default message
-        }
-
-        throw new Error(message);
-      }
-
-      const json = (await response.json()) as {
-        token: string;
-        user: User;
-      };
-
-      setLoginState({
-        token: json.token,
-        user: json.user,
-      });
-
-      setPassword(''); // clear password after success
+      await login(email, password);
+      setPassword('');
+      setDashboard(null);
+      setDashError(null);
     } catch (err: any) {
       console.log('Login error:', err);
-      setError(err?.message ?? 'Login failed');
+      setLoginError(err?.message ?? 'Login failed');
     } finally {
-      setLoading(false);
+      setLoadingLogin(false);
     }
   };
 
+  // --- Logout handler ---
   const handleLogout = () => {
-    setLoginState({
-      token: null,
-      user: null,
-    });
+    logout();
     setPassword('');
-    setError(null);
+    setLoginError(null);
+    setDashboard(null);
+    setDashError(null);
   };
 
-  // If not logged in -> show login UI
-  if (!loginState.token || !loginState.user) {
+  // --- Load dashboard whenever we have a token ---
+  useEffect(() => {
+    if (!token) {
+      setDashboard(null);
+      setDashError(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadDashboard = async () => {
+      try {
+        setLoadingDash(true);
+        setDashError(null);
+        const json = (await apiGet('/api/dashboard', token)) as DashboardData;
+        if (!cancelled) {
+          setDashboard(json);
+        }
+      } catch (err: any) {
+        console.log('Dashboard error:', err);
+        if (!cancelled) {
+          setDashError(err?.message ?? 'Failed to load dashboard');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingDash(false);
+        }
+      }
+    };
+
+    loadDashboard();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  // --- Render: not logged in -> show login form ---
+  if (!token || !user) {
     return (
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.card}>
-          <Text style={styles.title}>Syed Salleh Family</Text>
+          <Text style={styles.title}>Family App Login</Text>
+          <Text style={styles.subtitle}>
+            Sign in with your existing web account.
+          </Text>
 
           <Text style={styles.label}>Email</Text>
           <TextInput
@@ -127,14 +133,14 @@ export default function HomeScreen() {
             onChangeText={setPassword}
           />
 
-          {error && <Text style={styles.errorText}>{error}</Text>}
+          {loginError && <Text style={styles.errorText}>{loginError}</Text>}
 
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+            style={[styles.button, loadingLogin && styles.buttonDisabled]}
             onPress={handleLogin}
-            disabled={loading}
+            disabled={loadingLogin}
           >
-            {loading ? (
+            {loadingLogin ? (
               <ActivityIndicator color="#ffffff" />
             ) : (
               <Text style={styles.buttonText}>Login</Text>
@@ -149,33 +155,136 @@ export default function HomeScreen() {
     );
   }
 
-  // If logged in -> show simple dashboard
+  // --- Render: logged in -> show dashboard / my people / all people ---
+  if (loadingDash && !dashboard && !dashError) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" />
+        <Text style={{ marginTop: 10, color: '#666' }}>Loading dashboard…</Text>
+      </View>
+    );
+  }
+
+  if (dashError && !dashboard) {
+    return (
+      <View style={styles.container}>
+        <Text style={{ fontSize: 16, fontWeight: '500', color: '#b91c1c' }}>
+          {dashError}
+        </Text>
+
+        <TouchableOpacity
+          onPress={handleLogout}
+          style={[styles.logoutButton, { marginTop: 20 }]}
+        >
+          <Text style={styles.logoutText}>Log out</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // At this point we have dashboard data
   return (
     <View style={styles.container}>
       <View style={styles.dashboardHeader}>
         <Text style={styles.title}>Dashboard</Text>
         <Text style={styles.subtitle}>
-          Welcome back, {loginState.user.name}.
+          Welcome back, {dashboard?.user.name ?? user.name}.
         </Text>
       </View>
 
+      {/* Stats */}
       <View style={styles.cardsGrid}>
-        <View style={styles.card}>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => router.push('/people/my')}
+        >
           <Text style={styles.cardTitle}>My People</Text>
-          <Text style={styles.cardText}>Manage your family members.</Text>
-        </View>
+          <Text style={styles.cardText}>
+            {dashboard?.stats.my_people_count ?? 0}
+          </Text>
+          <Text style={{ marginTop: 4, color: '#6b7280', fontSize: 12 }}>
+            Tap to view your people
+          </Text>
+        </TouchableOpacity>
 
-        <View style={styles.card}>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => router.push('/people/all')}
+        >
           <Text style={styles.cardTitle}>All People</Text>
-          <Text style={styles.cardText}>Browse all people in the system.</Text>
-        </View>
-
-        <View style={[styles.card, styles.cardOutlined]}>
-          <Text style={styles.cardTitle}>Add Person</Text>
-          <Text style={styles.cardText}>Add a new family member.</Text>
-        </View>
+          <Text style={styles.cardText}>
+            {dashboard?.stats.all_people_count ?? 0}
+          </Text>
+          <Text style={{ marginTop: 4, color: '#6b7280', fontSize: 12 }}>
+            Tap to view everyone
+          </Text>
+        </TouchableOpacity>
       </View>
 
+      {/* Upcoming Birthdays */}
+      <View style={[styles.card, { marginTop: 20 }]}>
+        <Text style={styles.cardTitle}>Upcoming Birthdays</Text>
+
+        {dashboard?.upcoming_birthdays.length === 0 ? (
+          <Text style={{ marginTop: 10, color: '#666' }}>
+            No birthdays in the next 30 days.
+          </Text>
+        ) : (
+          dashboard?.upcoming_birthdays.map((p) => (
+            <View
+              key={p.id}
+              style={{
+                marginTop: 12,
+                paddingVertical: 6,
+                borderBottomWidth: 1,
+                borderColor: '#eee',
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                }}
+              >
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: '#ec4899',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+                    {p.name?.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{ fontWeight: '600', fontSize: 16 }}
+                  >
+                    {p.name}
+                  </Text>
+                  <Text style={{ color: '#666', fontSize: 13 }}>
+                    {p.days_until === 0
+                      ? 'Today!'
+                      : p.days_until === 1
+                      ? 'Tomorrow'
+                      : `in ${p.days_until} days`}
+                  </Text>
+                  <Text style={{ color: '#9ca3af', fontSize: 12 }}>
+                    Next birthday: {p.next_birthday_date}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ))
+        )}
+      </View>
+
+      {/* Logout */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutText}>Log out</Text>
       </TouchableOpacity>
@@ -186,14 +295,14 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f5', // light neutral
+    backgroundColor: '#f4f4f5',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
   card: {
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 500,
     backgroundColor: '#ffffff',
     borderRadius: 20,
     padding: 20,
@@ -209,7 +318,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 8,
     color: '#111827',
-    textAlign: 'center',
   },
   subtitle: {
     fontSize: 14,
@@ -273,13 +381,8 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   cardText: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  cardOutlined: {
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#93c5fd',
+    fontSize: 16,
+    color: '#4b5563',
   },
   logoutButton: {
     marginTop: 24,

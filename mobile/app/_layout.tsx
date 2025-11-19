@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
+import { AuthProvider } from '../context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export const unstable_settings = {
@@ -14,10 +15,17 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
+      <AuthProvider>
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="people/my" options={{ title: 'My People' }} />
+          <Stack.Screen name="people/all" options={{ title: 'All People' }} />
+          <Stack.Screen name="people/create" options={{ title: 'Add Person' }} />
+          <Stack.Screen name="people/[id]" options={{ title: 'Person Detail' }} />
+          <Stack.Screen name="people/[id]/edit" options={{ title: 'Edit Person' }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        </Stack>
+      </AuthProvider>
       <StatusBar style="auto" />
     </ThemeProvider>
   );

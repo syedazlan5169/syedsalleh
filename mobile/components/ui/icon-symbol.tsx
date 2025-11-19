@@ -23,6 +23,8 @@ const MAPPING = {
   'person': 'person-outline',
   'chart.bar.fill': 'bar-chart',
   'chart.bar': 'bar-chart',
+  'message.fill': 'message',
+  'message': 'message',
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',

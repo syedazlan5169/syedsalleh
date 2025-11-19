@@ -37,10 +37,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="notifications"
         options={{
-          title: 'Notifications',
-          tabBarIcon: ({ color, focused }) => (
-            <IconSymbol size={28} name={focused ? 'bell.fill' : 'bell'} color={color} />
-          ),
+          href: null, // Hide from tab bar
         }}
       />
       <Tabs.Screen
@@ -58,6 +55,15 @@ export default function TabLayout() {
           title: 'Statistics',
           tabBarIcon: ({ color, focused }) => (
             <IconSymbol size={28} name={focused ? 'chart.bar.fill' : 'chart.bar'} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: 'Chat',
+          tabBarIcon: ({ color, focused }) => (
+            <IconSymbol size={28} name={focused ? 'message.fill' : 'message'} color={color} />
           ),
         }}
       />

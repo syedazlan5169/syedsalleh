@@ -100,6 +100,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the messages sent by the user.
+     */
+    public function messages(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\Message::class);
+    }
+
+    /**
      * Check if the user is an admin.
      */
     public function isAdmin(): bool

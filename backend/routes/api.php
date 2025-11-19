@@ -356,6 +356,81 @@ Route::middleware('auth:sanctum')->group(function () {
         ]);
     });
 
+    Route::get('/chat/messages', function (Request $request) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $messages = \App\Models\Message::with('user:id,name,email')
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->map(function ($message) use ($user) {
+                return [
+                    'id' => $message->id,
+                    'user_id' => $message->user_id,
+                    'user_name' => $message->user->name,
+                    'message' => $message->message,
+                    'is_own' => $message->user_id === $user->id,
+                    'created_at' => $message->created_at->toISOString(),
+                ];
+            });
+
+        return response()->json([
+            'messages' => $messages,
+        ]);
+    });
+
+    Route::post('/chat/messages', function (Request $request) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $data = $request->validate([
+            'message' => ['required', 'string', 'max:5000'],
+        ]);
+
+        $message = \App\Models\Message::create([
+            'user_id' => $user->id,
+            'message' => $data['message'],
+        ]);
+
+        $message->load('user:id,name,email');
+
+        // Send push notifications to all users except the sender
+        $allUsers = \App\Models\User::where('id', '!=', $user->id)->get();
+        $pushTokens = [];
+        foreach ($allUsers as $targetUser) {
+            $userTokens = $targetUser->deviceTokens()->pluck('token')->toArray();
+            $pushTokens = array_merge($pushTokens, $userTokens);
+        }
+
+        // Send push notifications (without creating notification entries)
+        if (! empty($pushTokens)) {
+            $messagePreview = strlen($data['message']) > 100 
+                ? substr($data['message'], 0, 100) . '...' 
+                : $data['message'];
+            
+            send_push_notification(
+                $pushTokens,
+                'New Message',
+                "{$user->name}: {$messagePreview}",
+                [
+                    'type' => 'chat_message',
+                    'message_id' => $message->id,
+                ]
+            );
+        }
+
+        return response()->json([
+            'message' => [
+                'id' => $message->id,
+                'user_id' => $message->user_id,
+                'user_name' => $message->user->name,
+                'message' => $message->message,
+                'is_own' => true,
+                'created_at' => $message->created_at->toISOString(),
+            ],
+        ], 201);
+    });
+
     Route::get('/people/{person}', function (Request $request, Person $person) {
         /** @var \App\Models\User|null $user */
         $user = $request->user();

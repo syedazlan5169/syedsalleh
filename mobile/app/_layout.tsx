@@ -31,6 +31,7 @@ function RootLayoutInner() {
         <NotificationHandler />
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
           <Stack.Screen name="people/my" options={{ title: 'My People' }} />
           <Stack.Screen name="people/all" options={{ title: 'All People' }} />
           <Stack.Screen name="people/create" options={{ title: 'Add Person' }} />
@@ -63,7 +64,10 @@ function NotificationHandler() {
     responseListener.current = addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data;
       
-      if (data?.person_id) {
+      if (data?.type === 'chat_message') {
+        // Navigate to chat screen when chat message notification is tapped
+        router.push('/chat');
+      } else if (data?.person_id) {
         // Navigate to person detail if app is open (for both person_created and birthday_reminder)
         const currentSegments = segments;
         if (currentSegments.length > 0) {

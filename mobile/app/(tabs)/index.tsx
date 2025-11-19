@@ -16,11 +16,12 @@ import { useRouter } from 'expo-router';
 import { Palette } from '@/constants/theme';
 import { useThemePalette } from '@/context/ThemePreferenceContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { formatPersonName } from '@/utils/text';
 
 import { apiGet } from '../../apiClient';
 import { useAuth } from '../../context/AuthContext';
-import type { DashboardData } from '../../types/api';
+import type { DashboardData, NotificationsResponse } from '../../types/api';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -52,6 +53,7 @@ export default function HomeScreen() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [loadingDash, setLoadingDash] = useState(false);
   const [dashError, setDashError] = useState<string | null>(null);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   const handleLogin = async () => {
     setLoginError(null);
@@ -228,6 +230,24 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.screen}>
+      <View style={styles.dashboardHeader}>
+        <Text style={styles.dashboardHeaderTitle}>Dashboard</Text>
+        {token && (
+          <TouchableOpacity
+            style={styles.notificationButton}
+            onPress={() => router.push('/notifications')}
+          >
+            <IconSymbol size={24} name="bell" color={palette.text} />
+            {unreadNotificationCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
+      </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.heroCard}>
           <Text style={styles.heroTitle}>Welcome back, {heroName || user.name}</Text>
@@ -320,9 +340,46 @@ const createStyles = (palette: Palette) =>
       flex: 1,
       backgroundColor: palette.background,
     },
-    scrollContent: {
+    dashboardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       paddingHorizontal: 20,
       paddingTop: 60,
+      paddingBottom: 16,
+      backgroundColor: palette.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: palette.border,
+    },
+    dashboardHeaderTitle: {
+      fontSize: 28,
+      fontWeight: '700',
+      color: palette.text,
+    },
+    notificationButton: {
+      position: 'relative',
+      padding: 8,
+    },
+    notificationBadge: {
+      position: 'absolute',
+      top: 4,
+      right: 4,
+      backgroundColor: palette.danger,
+      borderRadius: 10,
+      minWidth: 20,
+      height: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 6,
+    },
+    notificationBadgeText: {
+      color: '#fff',
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    scrollContent: {
+      paddingHorizontal: 20,
+      paddingTop: 20,
       paddingBottom: 40,
       gap: 20,
     },

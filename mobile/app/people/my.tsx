@@ -5,6 +5,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -29,6 +30,15 @@ export default function MyPeopleScreen() {
   const [people, setPeople] = useState<MyPerson[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredPeople = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return people;
+    return people.filter((person) =>
+      person.name?.toLowerCase().includes(query),
+    );
+  }, [people, searchQuery]);
 
   const loadPeople = useCallback(async () => {
     if (!token) return;
@@ -91,43 +101,56 @@ export default function MyPeopleScreen() {
             You haven&apos;t added anyone yet.
           </Text>
         ) : (
-          people.map((p) => {
-            const { background, text } = getAvatarColors(p.gender, palette);
-            return (
-            <TouchableOpacity
-              key={p.id}
-              activeOpacity={0.7}
-              onPress={() =>
-                router.push({ pathname: '/people/[id]', params: { id: String(p.id) } })
-              }
-            >
-              <View style={styles.personCard}>
-                <View style={[styles.avatar, { backgroundColor: background }]}>
-                  <Text style={[styles.avatarText, { color: text }]}>
-                    {p.name?.charAt(0).toUpperCase()}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.personName}>{p.name}</Text>
-                  <Text style={styles.personMeta}>{p.nric}</Text>
-                  {p.email && <Text style={styles.personMeta}>{p.email}</Text>}
-                  {p.phone && <Text style={styles.personMeta}>{p.phone}</Text>}
-                  {p.age_years !== null && (
-                    <Text style={styles.personMeta}>
-                      Age: {p.age_years}{' '}
-                      {p.age_years === 1 ? 'year' : 'years'}
-                      {p.age_months && p.age_months > 0
-                        ? ` and ${p.age_months} ${
-                            p.age_months === 1 ? 'month' : 'months'
-                          }`
-                        : ''}
-                    </Text>
-                  )}
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-          })
+          <>
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search by name"
+              placeholderTextColor={palette.textMuted}
+              style={styles.searchInput}
+            />
+            {filteredPeople.length === 0 ? (
+              <Text style={styles.helperText}>No matches for that name.</Text>
+            ) : (
+              filteredPeople.map((p) => {
+                const { background, text } = getAvatarColors(p.gender, palette);
+                return (
+                  <TouchableOpacity
+                    key={p.id}
+                    activeOpacity={0.7}
+                    onPress={() =>
+                      router.push({ pathname: '/people/[id]', params: { id: String(p.id) } })
+                    }
+                  >
+                    <View style={styles.personCard}>
+                      <View style={[styles.avatar, { backgroundColor: background }]}>
+                        <Text style={[styles.avatarText, { color: text }]}>
+                          {p.name?.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.personName}>{p.name}</Text>
+                        <Text style={styles.personMeta}>{p.nric}</Text>
+                        {p.email && <Text style={styles.personMeta}>{p.email}</Text>}
+                        {p.phone && <Text style={styles.personMeta}>{p.phone}</Text>}
+                        {p.age_years !== null && (
+                          <Text style={styles.personMeta}>
+                            Age: {p.age_years}{' '}
+                            {p.age_years === 1 ? 'year' : 'years'}
+                            {p.age_months && p.age_months > 0
+                              ? ` and ${p.age_months} ${
+                                  p.age_months === 1 ? 'month' : 'months'
+                                }`
+                              : ''}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </>
         )}
       </ScrollView>
     </View>
@@ -152,6 +175,16 @@ const createStyles = (palette: Palette) =>
       marginTop: 12,
       color: palette.textMuted,
       textAlign: 'center',
+    },
+    searchInput: {
+      borderWidth: 1,
+      borderColor: palette.border,
+      borderRadius: 14,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      color: palette.text,
+      backgroundColor: palette.surface,
+      marginBottom: 12,
     },
     errorText: {
       marginTop: 12,

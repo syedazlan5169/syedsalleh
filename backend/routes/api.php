@@ -2,6 +2,7 @@
 
 use App\Http\Requests\StoreDocumentRequest;
 use App\Models\Document;
+use App\Models\Notification;
 use App\Models\User;
 use App\Models\Person;
 use Illuminate\Http\Request;
@@ -197,6 +198,23 @@ Route::middleware('auth:sanctum')->group(function () {
         $person->loadMissing('user');
         $age = $person->age_breakdown;
 
+        // Create notifications for all users
+        $allUsers = User::all();
+        $notifications = [];
+        foreach ($allUsers as $targetUser) {
+            $notifications[] = [
+                'user_id' => $targetUser->id,
+                'type' => 'person_created',
+                'title' => 'New Person Added',
+                'message' => "{$user->name} added a new person: {$person->name}",
+                'person_id' => $person->id,
+                'read' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+        Notification::insert($notifications);
+
         return response()->json([
             'person' => [
                 'id'            => $person->id,
@@ -387,6 +405,78 @@ Route::middleware('auth:sanctum')->group(function () {
         $document->delete();
 
         return response()->noContent();
+    });
+
+    Route::get('/notifications', function (Request $request) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $notifications = $user->notifications()
+            ->with('person')
+            ->latest()
+            ->get()
+            ->map(function (Notification $notification) {
+                return [
+                    'id' => $notification->id,
+                    'type' => $notification->type,
+                    'title' => $notification->title,
+                    'message' => $notification->message,
+                    'person_id' => $notification->person_id,
+                    'read' => $notification->read,
+                    'read_at' => optional($notification->read_at)->toDateTimeString(),
+                    'created_at' => optional($notification->created_at)->toDateTimeString(),
+                ];
+            })
+            ->values();
+
+        $unreadCount = $user->notifications()->where('read', false)->count();
+
+        return response()->json([
+            'notifications' => $notifications,
+            'unread_count' => $unreadCount,
+        ]);
+    });
+
+    Route::patch('/notifications/{notification}/read', function (Request $request, Notification $notification) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        if ($notification->user_id !== $user->id) {
+            return response()->json([
+                'message' => 'You are not allowed to update this notification.',
+            ], 403);
+        }
+
+        $notification->markAsRead();
+
+        return response()->json([
+            'notification' => [
+                'id' => $notification->id,
+                'type' => $notification->type,
+                'title' => $notification->title,
+                'message' => $notification->message,
+                'person_id' => $notification->person_id,
+                'read' => $notification->read,
+                'read_at' => optional($notification->read_at)->toDateTimeString(),
+                'created_at' => optional($notification->created_at)->toDateTimeString(),
+            ],
+        ]);
+    });
+
+    Route::post('/notifications/mark-all-read', function (Request $request) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $user->notifications()
+            ->where('read', false)
+            ->update([
+                'read' => true,
+                'read_at' => now(),
+            ]);
+
+        return response()->json([
+            'message' => 'All notifications marked as read.',
+        ]);
     });
 });
 

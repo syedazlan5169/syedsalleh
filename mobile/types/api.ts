@@ -64,3 +64,19 @@ export type PersonDetail = MyPerson & {
   can_manage_documents?: boolean;
 };
 
+export type Notification = {
+  id: number;
+  type: string;
+  title: string;
+  message: string;
+  person_id: number | null;
+  read: boolean;
+  read_at: string | null;
+  created_at: string | null;
+};
+
+export type NotificationsResponse = {
+  notifications: Notification[];
+  unread_count: number;
+};
+

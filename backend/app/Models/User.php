@@ -84,6 +84,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the notifications for the user.
+     */
+    public function notifications(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\Notification::class);
+    }
+
+    /**
      * Check if the user is an admin.
      */
     public function isAdmin(): bool

@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { Palette } from '@/constants/theme';
 import { useThemePalette } from '@/context/ThemePreferenceContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { formatPersonName } from '@/utils/text';
 
 import { apiGet } from '../../apiClient';
 import { useAuth } from '../../context/AuthContext';
@@ -185,6 +186,8 @@ export default function HomeScreen() {
     );
   }
 
+  const heroName = formatPersonName(dashboard?.user.name ?? user.name);
+
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -193,9 +196,7 @@ export default function HomeScreen() {
         </View>
         <View style={styles.heroCard}>
           <Text style={styles.heroEyebrow}>Dashboard</Text>
-          <Text style={styles.heroTitle}>
-            Welcome back, {dashboard?.user.name ?? user.name}
-          </Text>
+          <Text style={styles.heroTitle}>Welcome back, {heroName || user.name}</Text>
           <Text style={styles.heroSubtitle}>
             Stay informed about your people and upcoming engagements.
           </Text>
@@ -235,11 +236,8 @@ export default function HomeScreen() {
           ) : (
             dashboard?.upcoming_birthdays.map((p) => (
               <View key={p.id} style={styles.listRow}>
-                <View style={styles.avatarCircle}>
-                  <Text style={styles.avatarLetter}>{p.name?.charAt(0).toUpperCase()}</Text>
-                </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.listTitle}>{p.name}</Text>
+                  <Text style={styles.listTitle}>{formatPersonName(p.name) || p.name}</Text>
                   <Text style={styles.listSubtitle}>
                     {p.days_until === 0
                       ? 'Today'
@@ -397,19 +395,6 @@ const createStyles = (palette: Palette) =>
       paddingVertical: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderColor: palette.border,
-    },
-    avatarCircle: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: palette.tint,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    avatarLetter: {
-      color: '#fff',
-      fontWeight: '700',
-      fontSize: 18,
     },
     listTitle: {
       fontSize: 16,

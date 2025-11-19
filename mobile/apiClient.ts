@@ -2,20 +2,22 @@ import { API_BASE_URL } from './apiConfig';
 
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-  body?: unknown;
+  body?: any;
 };
 
 async function apiRequest(path: string, token: string, options: RequestOptions = {}) {
   const { method = 'GET', body } = options;
+
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
     headers: {
       Accept: 'application/json',
       Authorization: `Bearer ${token}`,
-      ...(body ? { 'Content-Type': 'application/json' } : {}),
+      ...(body && !isFormData ? { 'Content-Type': 'application/json' } : {}),
     },
-    body: body ? JSON.stringify(body) : undefined,
+    body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
   });
 
   if (!response.ok) {
@@ -41,10 +43,18 @@ export function apiGet(path: string, token: string) {
   return apiRequest(path, token);
 }
 
-export function apiPost(path: string, token: string, body: unknown) {
+export function apiPost(path: string, token: string, body: any) {
   return apiRequest(path, token, { method: 'POST', body });
 }
 
-export function apiPut(path: string, token: string, body: unknown) {
+export function apiPut(path: string, token: string, body: any) {
   return apiRequest(path, token, { method: 'PUT', body });
+}
+
+export function apiPatch(path: string, token: string, body: any) {
+  return apiRequest(path, token, { method: 'PATCH', body });
+}
+
+export function apiDelete(path: string, token: string) {
+  return apiRequest(path, token, { method: 'DELETE' });
 }

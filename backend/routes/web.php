@@ -1,6 +1,8 @@
 <?php
 
+use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Fortify\Features;
 use Livewire\Volt\Volt;
 
@@ -54,4 +56,30 @@ Route::middleware(['auth', 'approved'])->group(function () {
     Volt::route('admin/users', 'pages.admin.users')->name('admin.users');
     Volt::route('admin/suggestions', 'pages.admin.suggestions')->name('admin.suggestions');
     Volt::route('admin/activity', 'pages.admin.activity')->name('admin.activity');
+});
+
+Route::get('/storage/{path}', function (string $path) {
+    $disk = Storage::disk('public');
+    
+    if (! $disk->exists($path)) {
+        \Log::warning('Storage file not found', ['path' => $path, 'full_path' => $disk->path($path)]);
+        abort(404, "File not found: {$path}");
+    }
+
+    $filePath = $disk->path($path);
+    
+    if (! file_exists($filePath)) {
+        \Log::error('Storage path exists but file not found on disk', [
+            'path' => $path,
+            'storage_path' => $filePath,
+            'storage_root' => storage_path('app/public'),
+        ]);
+        abort(404, "Physical file not found: {$filePath}");
+    }
+
+    return response()->file($filePath);
+})->where('path', '.*');
+
+Route::fallback(function () {
+    abort(404);
 });

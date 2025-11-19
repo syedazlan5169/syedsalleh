@@ -15,6 +15,7 @@ import { Stack, useRouter } from 'expo-router';
 import { Palette } from '@/constants/theme';
 import { useThemePalette } from '@/context/ThemePreferenceContext';
 import { getAvatarColors } from '@/utils/avatar';
+import { formatPersonName, getNameInitial } from '@/utils/text';
 
 import { apiGet } from '../../apiClient';
 import { useAuth } from '../../context/AuthContext';
@@ -114,6 +115,8 @@ export default function MyPeopleScreen() {
             ) : (
               filteredPeople.map((p) => {
                 const { background, text } = getAvatarColors(p.gender, palette);
+                const displayName = formatPersonName(p.name);
+                const initial = getNameInitial(p.name);
                 return (
                   <TouchableOpacity
                     key={p.id}
@@ -125,11 +128,11 @@ export default function MyPeopleScreen() {
                     <View style={styles.personCard}>
                       <View style={[styles.avatar, { backgroundColor: background }]}>
                         <Text style={[styles.avatarText, { color: text }]}>
-                          {p.name?.charAt(0).toUpperCase()}
+                          {initial}
                         </Text>
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.personName}>{p.name}</Text>
+                        <Text style={styles.personName}>{displayName || p.name}</Text>
                         <Text style={styles.personMeta}>{p.nric}</Text>
                         {p.email && <Text style={styles.personMeta}>{p.email}</Text>}
                         {p.phone && <Text style={styles.personMeta}>{p.phone}</Text>}

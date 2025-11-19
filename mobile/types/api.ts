@@ -40,6 +40,18 @@ export type DashboardData = {
   my_people: MyPerson[];
 };
 
+export type PersonDocument = {
+  id: number;
+  name: string;
+  original_name: string | null;
+  file_size: number | null;
+  mime_type: string | null;
+  is_public: boolean;
+  file_url: string;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
 export type PersonDetail = MyPerson & {
   gender?: string | null;
   blood_type?: string | null;
@@ -48,5 +60,7 @@ export type PersonDetail = MyPerson & {
   owner_id?: number | null;
   created_at?: string | null;
   updated_at?: string | null;
+  documents?: PersonDocument[];
+  can_manage_documents?: boolean;
 };
 

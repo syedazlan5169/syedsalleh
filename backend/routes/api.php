@@ -1,11 +1,40 @@
 <?php
 
+use App\Http\Requests\StoreDocumentRequest;
+use App\Models\Document;
 use App\Models\User;
 use App\Models\Person;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+
+if (! function_exists('map_document_response')) {
+    function map_document_response(Document $document, ?Request $request = null): array
+    {
+        $root = $request ? $request->getSchemeAndHttpHost() : config('app.url');
+        if (! $root) {
+            $root = config('app.url');
+        }
+        $root = rtrim($root ?? '', '/');
+
+        $storagePath = $root.'/storage/'.ltrim($document->file_path, '/');
+
+        return [
+            'id' => $document->id,
+            'name' => $document->name,
+            'original_name' => $document->original_name,
+            'file_size' => $document->file_size,
+            'mime_type' => $document->mime_type,
+            'is_public' => $document->is_public,
+            'file_url' => $storagePath,
+            'created_at' => optional($document->created_at)->toDateTimeString(),
+            'updated_at' => optional($document->updated_at)->toDateTimeString(),
+        ];
+    }
+}
 
 
 Route::get('/ping', function () {
@@ -105,9 +134,24 @@ Route::middleware('auth:sanctum')->group(function () {
         ]);
     });
 
-    Route::get('/people/{person}', function (Person $person) {
+    Route::get('/people/{person}', function (Request $request, Person $person) {
+        /** @var \App\Models\User|null $user */
+        $user = $request->user();
+
         $person->loadMissing('user');
         $age = $person->age_breakdown;
+        $documentsQuery = $person->documents()->latest();
+
+        if (! $user || ($user->id !== $person->user_id && ! $user->isAdmin())) {
+            $documentsQuery->where('is_public', true);
+        }
+
+        $documents = $documentsQuery
+            ->get()
+            ->map(fn (Document $document) => map_document_response($document, $request))
+            ->values();
+
+        $canManageDocuments = $user && ($user->id === $person->user_id || $user->isAdmin());
 
         return response()->json([
             'person' => [
@@ -127,6 +171,8 @@ Route::middleware('auth:sanctum')->group(function () {
                 'owner_name'    => optional($person->user)->name,
                 'created_at'    => optional($person->created_at)->toDateTimeString(),
                 'updated_at'    => optional($person->updated_at)->toDateTimeString(),
+                'documents'     => $documents,
+                'can_manage_documents' => (bool) $canManageDocuments,
             ],
         ]);
     });
@@ -169,6 +215,8 @@ Route::middleware('auth:sanctum')->group(function () {
                 'owner_name'    => optional($person->user)->name,
                 'created_at'    => optional($person->created_at)->toDateTimeString(),
                 'updated_at'    => optional($person->updated_at)->toDateTimeString(),
+                'documents'     => [],
+                'can_manage_documents' => true,
             ],
         ], 201);
     });
@@ -222,8 +270,123 @@ Route::middleware('auth:sanctum')->group(function () {
                 'owner_name'    => optional($person->user)->name,
                 'created_at'    => optional($person->created_at)->toDateTimeString(),
                 'updated_at'    => optional($person->updated_at)->toDateTimeString(),
+                'documents'     => $person->documents()->latest()->get()->map(fn (Document $document) => map_document_response($document, $request))->values(),
+                'can_manage_documents' => true,
             ],
         ]);
+    });
+
+    Route::delete('/people/{person}', function (Request $request, Person $person) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        if ($person->user_id !== $user->id && ! $user->isAdmin()) {
+            return response()->json([
+                'message' => 'You are not allowed to delete this person.',
+            ], 403);
+        }
+
+        $person->loadMissing('documents');
+
+        foreach ($person->documents as $document) {
+            Storage::disk('public')->delete($document->file_path);
+            $document->delete();
+        }
+
+        $person->delete();
+
+        return response()->noContent();
+    });
+
+    Route::get('/people/{person}/documents', function (Request $request, Person $person) {
+        /** @var \App\Models\User|null $user */
+        $user = $request->user();
+
+        $documentsQuery = $person->documents()->latest();
+
+        if (! $user || ($user->id !== $person->user_id && ! $user->isAdmin())) {
+            $documentsQuery->where('is_public', true);
+        }
+
+        $documents = $documentsQuery
+            ->get()
+            ->map(fn (Document $document) => map_document_response($document, $request))
+            ->values();
+
+        return response()->json([
+            'documents' => $documents,
+        ]);
+    });
+
+    Route::post('/people/{person}/documents', function (StoreDocumentRequest $request, Person $person) {
+        /** @var \App\Models\User|null $user */
+        $user = $request->user();
+
+        if (! $user || ($user->id !== $person->user_id && ! $user->isAdmin())) {
+            return response()->json([
+                'message' => 'You are not allowed to upload documents for this person.',
+            ], 403);
+        }
+
+        $validated = $request->validated();
+        $file = $request->file('file');
+        $path = $file->store('documents', 'public');
+
+        $document = $person->documents()->create([
+            'name' => $validated['name'],
+            'file_path' => $path,
+            'original_name' => $file->getClientOriginalName(),
+            'file_size' => $file->getSize(),
+            'mime_type' => $file->getMimeType(),
+            'is_public' => (bool) ($validated['is_public'] ?? false),
+        ]);
+
+        return response()->json([
+            'document' => map_document_response($document, $request),
+        ], 201);
+    });
+
+    Route::patch('/documents/{document}', function (Request $request, Document $document) {
+        /** @var \App\Models\User|null $user */
+        $user = $request->user();
+
+        $document->loadMissing('person.user');
+
+        if (! $user || ($document->person->user_id !== $user->id && ! $user->isAdmin())) {
+            return response()->json([
+                'message' => 'You are not allowed to update this document.',
+            ], 403);
+        }
+
+        $data = $request->validate([
+            'is_public' => ['required', 'boolean'],
+        ]);
+
+        $document->update([
+            'is_public' => $data['is_public'],
+        ]);
+
+        return response()->json([
+            'document' => map_document_response($document, $request),
+        ]);
+    });
+
+    Route::delete('/documents/{document}', function (Request $request, Document $document) {
+        /** @var \App\Models\User|null $user */
+        $user = $request->user();
+
+        $document->loadMissing('person.user');
+
+        if (! $user || ($document->person->user_id !== $user->id && ! $user->isAdmin())) {
+            return response()->json([
+                'message' => 'You are not allowed to delete this document.',
+            ], 403);
+        }
+
+        Storage::disk('public')->delete($document->file_path);
+        $document->delete();
+
+        return response()->noContent();
     });
 });
 

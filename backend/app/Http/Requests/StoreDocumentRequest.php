@@ -24,7 +24,7 @@ class StoreDocumentRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'file' => ['required', File::types(['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'])->max(5120)],
+            'file' => ['required', File::types(['pdf', 'jpg', 'jpeg', 'png'])->max(5120)],
             'is_public' => ['sometimes', 'boolean'],
         ];
     }

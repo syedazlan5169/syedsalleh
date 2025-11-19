@@ -190,6 +190,127 @@ Route::middleware('auth:sanctum')->group(function () {
         ]);
     });
 
+    Route::get('/statistics', function (Request $request) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $totalPeople = \App\Models\Person::count();
+        $totalUsers = \App\Models\User::count();
+        $totalDocuments = \App\Models\Document::count();
+        $peopleThisMonth = \App\Models\Person::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+        $usersThisMonth = \App\Models\User::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+        $documentsThisMonth = \App\Models\Document::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+
+        $genderDistribution = \App\Models\Person::selectRaw('gender, COUNT(*) as count')
+            ->groupBy('gender')
+            ->get()
+            ->pluck('count', 'gender')
+            ->toArray();
+
+        $documentTypes = \App\Models\Document::selectRaw('
+            CASE 
+                WHEN mime_type LIKE "image/%" THEN "Images"
+                WHEN mime_type LIKE "application/pdf" THEN "PDFs"
+                ELSE "Other"
+            END as type,
+            COUNT(*) as count
+        ')
+            ->groupBy('type')
+            ->get()
+            ->pluck('count', 'type')
+            ->toArray();
+
+        $connection = \Illuminate\Support\Facades\DB::connection()->getDriverName();
+        if ($connection === 'sqlite') {
+            $topUsers = \App\Models\User::whereHas('people')
+                ->withCount('people')
+                ->orderBy('people_count', 'desc')
+                ->limit(5)
+                ->get()
+                ->map(fn ($u) => [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'people_count' => $u->people_count,
+                ]);
+        } else {
+            $topUsers = \App\Models\User::withCount('people')
+                ->having('people_count', '>', 0)
+                ->orderBy('people_count', 'desc')
+                ->limit(5)
+                ->get()
+                ->map(fn ($u) => [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'people_count' => $u->people_count,
+                ]);
+        }
+
+        $people = \App\Models\Person::whereNotNull('date_of_birth')->get();
+        $ageGroups = [
+            '0-17' => 0,
+            '18-25' => 0,
+            '26-35' => 0,
+            '36-50' => 0,
+            '51-65' => 0,
+            '65+' => 0,
+        ];
+
+        foreach ($people as $person) {
+            if (!$person->date_of_birth) {
+                continue;
+            }
+            $age = $person->date_of_birth->diffInYears(now());
+            if ($age < 18) {
+                $ageGroups['0-17']++;
+            } elseif ($age <= 25) {
+                $ageGroups['18-25']++;
+            } elseif ($age <= 35) {
+                $ageGroups['26-35']++;
+            } elseif ($age <= 50) {
+                $ageGroups['36-50']++;
+            } elseif ($age <= 65) {
+                $ageGroups['51-65']++;
+            } else {
+                $ageGroups['65+']++;
+            }
+        }
+
+        $publicDocuments = \App\Models\Document::where('is_public', true)->count();
+        $privateDocuments = \App\Models\Document::where('is_public', false)->count();
+        $peopleWithDocs = \App\Models\Person::has('documents')->count();
+        $averageDocumentsPerPerson = $peopleWithDocs > 0 ? round($totalDocuments / $peopleWithDocs, 1) : 0;
+
+        return response()->json([
+            'overview' => [
+                'total_people' => $totalPeople,
+                'total_users' => $totalUsers,
+                'total_documents' => $totalDocuments,
+                'people_this_month' => $peopleThisMonth,
+                'users_this_month' => $usersThisMonth,
+                'documents_this_month' => $documentsThisMonth,
+            ],
+            'gender_distribution' => $genderDistribution,
+            'document_types' => $documentTypes,
+            'document_visibility' => [
+                'public' => $publicDocuments,
+                'private' => $privateDocuments,
+            ],
+            'top_users' => $topUsers,
+            'age_groups' => $ageGroups,
+            'additional_metrics' => [
+                'average_documents_per_person' => $averageDocumentsPerPerson,
+                'people_with_documents' => $peopleWithDocs,
+                'people_without_documents' => \App\Models\Person::doesntHave('documents')->count(),
+            ],
+        ]);
+    });
+
     Route::get('/people/{person}', function (Request $request, Person $person) {
         /** @var \App\Models\User|null $user */
         $user = $request->user();

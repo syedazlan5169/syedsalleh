@@ -20,7 +20,7 @@ import { formatPersonName } from '@/utils/text';
 
 import { apiGet } from '../../apiClient';
 import { useAuth } from '../../context/AuthContext';
-import type { DashboardData, NotificationsResponse } from '../../types/api';
+import type { DashboardData } from '../../types/api';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -52,7 +52,6 @@ export default function HomeScreen() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [loadingDash, setLoadingDash] = useState(false);
   const [dashError, setDashError] = useState<string | null>(null);
-  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   const handleLogin = async () => {
     setLoginError(null);
@@ -121,33 +120,6 @@ export default function HomeScreen() {
     };
   }, [token]);
 
-  useEffect(() => {
-    if (!token) {
-      setUnreadNotificationCount(0);
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadNotifications = async () => {
-      try {
-        const json = (await apiGet('/api/notifications', token)) as NotificationsResponse;
-        if (!cancelled) {
-          setUnreadNotificationCount(json.unread_count ?? 0);
-        }
-      } catch (err: any) {
-        console.log('Notifications count error:', err);
-      }
-    };
-
-    loadNotifications();
-    const interval = setInterval(loadNotifications, 30000); // Refresh every 30 seconds
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [token]);
 
   if (authLoading) {
     return (
@@ -259,21 +231,6 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.toggleRow}>
           <ThemeToggle />
-          {token && (
-            <TouchableOpacity
-              style={styles.notificationButton}
-              onPress={() => router.push('/notifications')}
-            >
-              <Text style={styles.notificationIcon}>🔔</Text>
-              {unreadNotificationCount > 0 && (
-                <View style={styles.notificationBadge}>
-                  <Text style={styles.notificationBadgeText}>
-                    {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          )}
         </View>
         <View style={styles.heroCard}>
           <Text style={styles.heroEyebrow}>Dashboard</Text>
@@ -359,9 +316,6 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.secondaryButton} onPress={handleLogout}>
-          <Text style={styles.secondaryButtonText}>Sign out</Text>
-        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -625,33 +579,7 @@ const createStyles = (palette: Palette) =>
       fontWeight: '500',
     },
     toggleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      alignItems: 'flex-end',
       marginBottom: 16,
-    },
-    notificationButton: {
-      position: 'relative',
-      padding: 8,
-    },
-    notificationIcon: {
-      fontSize: 24,
-    },
-    notificationBadge: {
-      position: 'absolute',
-      top: 4,
-      right: 4,
-      backgroundColor: palette.danger,
-      borderRadius: 10,
-      minWidth: 20,
-      height: 20,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 6,
-    },
-    notificationBadgeText: {
-      color: '#fff',
-      fontSize: 11,
-      fontWeight: '700',
     },
   });

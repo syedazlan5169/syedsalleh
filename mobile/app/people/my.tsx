@@ -20,12 +20,13 @@ import { formatPersonName, getNameInitial } from '@/utils/text';
 import { apiGet } from '../../apiClient';
 import { useAuth } from '../../context/AuthContext';
 import type { DashboardData, MyPerson } from '../../types/api';
+import { IconSymbol } from '../../components/ui/icon-symbol';
 
 export default function MyPeopleScreen() {
   const palette = useThemePalette();
   const styles = useMemo(() => createStyles(palette), [palette]);
 
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const router = useRouter();
 
   const [people, setPeople] = useState<MyPerson[]>([]);
@@ -132,7 +133,23 @@ export default function MyPeopleScreen() {
                         </Text>
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.personName}>{displayName || p.name}</Text>
+                        <View style={styles.nameRow}>
+                          <Text style={styles.personName}>{displayName || p.name}</Text>
+                          {!p.is_shared && user && (
+                            <TouchableOpacity
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                router.push({
+                                  pathname: '/people/[id]/share',
+                                  params: { id: String(p.id) },
+                                });
+                              }}
+                              style={styles.shareButton}
+                            >
+                              <IconSymbol name="square.and.arrow.up" size={20} color={palette.tint} />
+                            </TouchableOpacity>
+                          )}
+                        </View>
                         {p.age_years !== null && (
                           <Text style={styles.personMeta}>
                             {p.age_years} {p.age_years === 1 ? 'year' : 'years'}
@@ -219,10 +236,20 @@ const createStyles = (palette: Palette) =>
       fontWeight: '700',
       fontSize: 18,
     },
+    nameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
     personName: {
       fontSize: 18,
       fontWeight: '600',
       color: palette.text,
+      flex: 1,
+    },
+    shareButton: {
+      padding: 4,
     },
     personMeta: {
       color: palette.textMuted,

@@ -33,6 +33,10 @@ const MAPPING = {
   'clock': 'schedule',
   'info.circle': 'info',
   'doc.text': 'description',
+  'eye': 'visibility',
+  'eye.fill': 'visibility',
+  'trash': 'delete',
+  'trash.fill': 'delete',
 } as IconMapping;
 
 /**

@@ -19,6 +19,7 @@ import { Platform } from 'react-native';
 
 import { Palette } from '@/constants/theme';
 import { useThemePalette } from '@/context/ThemePreferenceContext';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { getAvatarColors } from '@/utils/avatar';
 import { formatPersonName, getNameInitial } from '@/utils/text';
 
@@ -437,19 +438,8 @@ export default function PersonDetailScreen() {
                       <Text style={styles.documentMeta}>
                         {(doc.original_name ?? 'Unnamed file') + ' · ' + formatFileSize(doc.file_size)}
                       </Text>
-                      <View style={styles.chipRow}>
-                        <Text
-                          style={[
-                            styles.documentChip,
-                            doc.is_public ? styles.publicChip : styles.privateChip,
-                          ]}
-                        >
-                          {doc.is_public ? 'Public' : 'Private'}
-                        </Text>
-                      </View>
                       {canManageDocuments && (
                         <View style={styles.visibilitySwitchRow}>
-                          <Text style={[styles.switchLabel, { color: palette.text }]}>Public</Text>
                           <Switch
                             value={doc.is_public}
                             onValueChange={(value) => handleToggleDocumentVisibility(doc.id, value)}
@@ -460,25 +450,51 @@ export default function PersonDetailScreen() {
                               deletingDocumentId === doc.id
                             }
                           />
+                          <Text
+                            style={[
+                              styles.documentChip,
+                              doc.is_public ? styles.publicChip : styles.privateChip,
+                            ]}
+                          >
+                            {doc.is_public ? 'Public' : 'Private'}
+                          </Text>
+                        </View>
+                      )}
+                      {!canManageDocuments && (
+                        <View style={styles.chipRow}>
+                          <Text
+                            style={[
+                              styles.documentChip,
+                              doc.is_public ? styles.publicChip : styles.privateChip,
+                            ]}
+                          >
+                            {doc.is_public ? 'Public' : 'Private'}
+                          </Text>
                         </View>
                       )}
                     </View>
                     <View style={styles.documentActions}>
                       <TouchableOpacity
                         onPress={() => handleOpenDocument(doc.file_url)}
-                        style={styles.documentButton}
+                        style={styles.documentIconButton}
                       >
-                        <Text style={styles.documentButtonText}>{actionLabel}</Text>
+                        <IconSymbol
+                          name="eye"
+                          size={20}
+                          color={palette.tint}
+                        />
                       </TouchableOpacity>
                       {canManageDocuments && (
                         <TouchableOpacity
                           onPress={() => confirmDeleteDocument(doc.id)}
-                          style={[styles.documentButton, styles.deleteButton]}
+                          style={[styles.documentIconButton, styles.deleteIconButton]}
                           disabled={deletingDocumentId === doc.id}
                         >
-                          <Text style={styles.deleteButtonText}>
-                            {deletingDocumentId === doc.id ? 'Removing…' : 'Delete'}
-                          </Text>
+                          <IconSymbol
+                            name="trash"
+                            size={20}
+                            color={deletingDocumentId === doc.id ? palette.textMuted : palette.danger}
+                          />
                         </TouchableOpacity>
                       )}
                     </View>
@@ -688,7 +704,7 @@ const createStyles = (palette: Palette) =>
     visibilitySwitchRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
+      gap: 8,
       marginTop: 8,
     },
     documentChip: {
@@ -707,28 +723,22 @@ const createStyles = (palette: Palette) =>
       color: palette.danger,
     },
     documentActions: {
-      alignItems: 'flex-end',
-      justifyContent: 'space-between',
+      flexDirection: 'row',
+      alignItems: 'center',
       gap: 8,
     },
-    documentButton: {
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: 999,
+    documentIconButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       borderWidth: 1,
       borderColor: palette.border,
+      backgroundColor: palette.surface,
       alignItems: 'center',
+      justifyContent: 'center',
     },
-    documentButtonText: {
-      color: palette.tint,
-      fontWeight: '600',
-    },
-    deleteButton: {
+    deleteIconButton: {
       borderColor: palette.danger,
-    },
-    deleteButtonText: {
-      color: palette.danger,
-      fontWeight: '600',
     },
     uploadCard: {
       marginTop: 20,

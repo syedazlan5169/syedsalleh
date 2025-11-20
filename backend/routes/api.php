@@ -231,6 +231,7 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
 
         $myPeopleCount  = $myPeople->count();
         $allPeopleCount = Person::count();
+        $favoritesCount = $user->favorites()->count();
 
         return response()->json([
             'user' => [
@@ -241,6 +242,7 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
             'stats' => [
                 'my_people_count'  => $myPeopleCount,
                 'all_people_count' => $allPeopleCount,
+                'favorites_count'  => $favoritesCount,
             ],
             'upcoming_birthdays' => $upcomingBirthdays,
             'my_people'          => $myPeople,
@@ -990,38 +992,81 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
 
         return response()->noContent();
     });
-});
 
-Route::get('/people', function (Request $request) {
-    $search = $request->string('search')->toString();
+    Route::post('/people/{person}/favorite', function (Request $request, Person $person) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
 
-    $peopleQuery = Person::query()
-        ->with('user')
-        ->when($search, function ($query, $search) {
-            $query->where('name', 'like', "%{$search}%");
-        })
-        ->latest();
+        $isFavorite = $user->favorites()->where('person_id', $person->id)->exists();
 
-    $people = $peopleQuery->get()->map(function (Person $person) {
-        $age = $person->age_breakdown;
+        if ($isFavorite) {
+            // Remove from favorites
+            $user->favorites()->detach($person->id);
+            $message = 'Person removed from favorites.';
+        } else {
+            // Add to favorites
+            $user->favorites()->attach($person->id);
+            $message = 'Person added to favorites.';
+        }
 
-        return [
-            'id'            => $person->id,
-            'name'          => $person->name,
-            'nric'          => $person->nric,
-            'email'         => $person->email,
-            'phone'         => $person->phone,
-            'gender'        => $person->gender,
-            'date_of_birth' => optional($person->date_of_birth)->toDateString(),
-            'age_years'     => $age['years'],
-            'age_months'    => $age['months'],
-            'owner_name'    => optional($person->user)->name,
-        ];
-    })->values();
+        // Log activity
+        ActivityLogger::log(
+            $isFavorite ? 'person.unfavorited' : 'person.favorited',
+            __($isFavorite ? ':name removed :person_name from favorites' : ':name added :person_name to favorites', [
+                'name' => $user->name,
+                'person_name' => $person->name,
+            ]),
+            $person,
+            ['via' => 'mobile_app']
+        );
 
-    return response()->json([
-        'people' => $people,
-    ]);
+        return response()->json([
+            'message' => $message,
+            'is_favorite' => !$isFavorite,
+        ]);
+    });
+
+    Route::get('/people', function (Request $request) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+        $search = $request->string('search')->toString();
+
+        // Get user's favorite person IDs
+        $favoriteIds = $user->favorites()->pluck('person_id')->toArray();
+
+        $peopleQuery = Person::query()
+            ->with('user')
+            ->when($search, function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%");
+            })
+            ->latest();
+
+        $people = $peopleQuery->get()->map(function (Person $person) use ($favoriteIds) {
+            $age = $person->age_breakdown;
+            $isFavorite = in_array($person->id, $favoriteIds);
+
+            return [
+                'id'            => $person->id,
+                'name'          => $person->name,
+                'nric'          => $person->nric,
+                'email'         => $person->email,
+                'phone'         => $person->phone,
+                'gender'        => $person->gender,
+                'date_of_birth' => optional($person->date_of_birth)->toDateString(),
+                'age_years'     => $age['years'],
+                'age_months'    => $age['months'],
+                'owner_name'    => optional($person->user)->name,
+                'is_favorite'   => $isFavorite,
+            ];
+        })->sortByDesc(function ($person) {
+            // Sort favorites first, then by created_at
+            return [$person['is_favorite'] ? 1 : 0, $person['id']];
+        })->values();
+
+        return response()->json([
+            'people' => $people,
+        ]);
+    });
 });
 
 // Admin routes (only for admins)

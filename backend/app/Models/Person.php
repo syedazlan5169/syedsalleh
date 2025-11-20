@@ -61,6 +61,15 @@ class Person extends Model
     }
 
     /**
+     * Get the users who have favorited this person.
+     */
+    public function favoritedBy(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\User::class, 'favorites')
+            ->withTimestamps();
+    }
+
+    /**
      * Scope a query to only include people with upcoming birthdays.
      */
     public function scopeUpcomingBirthdays($query, int $days = 30)

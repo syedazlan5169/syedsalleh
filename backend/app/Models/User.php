@@ -123,4 +123,13 @@ class User extends Authenticatable
     {
         return $this->approved_at !== null;
     }
+
+    /**
+     * Get the people that the user has favorited.
+     */
+    public function favorites(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\Person::class, 'favorites')
+            ->withTimestamps();
+    }
 }

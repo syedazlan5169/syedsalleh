@@ -399,6 +399,22 @@ export default function HomeScreen() {
                 {dashboard?.stats.all_people_count ?? 0}
               </Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.heroButton}
+              onPress={() => router.push('/people/favorites')}
+            >
+              <Text style={styles.heroButtonLabel}>Favourite</Text>
+              <Text style={styles.heroButtonValue}>
+                {dashboard?.stats.favorites_count ?? 0}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.heroButton}
+              onPress={() => router.push('/people/create')}
+            >
+              <Text style={styles.heroButtonLabel}>Add Person</Text>
+              <Text style={styles.heroButtonValue}>+</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -433,29 +449,6 @@ export default function HomeScreen() {
           )}
         </View>
 
-        <View style={styles.sectionCard}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <Text style={styles.sectionSubtitle}>Manage your people</Text>
-          </View>
-
-          <View style={styles.quickGrid}>
-            <TouchableOpacity
-              style={styles.quickCard}
-              onPress={() => router.push('/people/create')}
-            >
-              <Text style={styles.quickLabel}>Add Person</Text>
-              <Text style={styles.quickHelper}>Create a new profile</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickCard}
-              onPress={() => router.push('/people/all')}
-            >
-              <Text style={styles.quickLabel}>Browse Directory</Text>
-              <Text style={styles.quickHelper}>View entire list</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
 
       </ScrollView>
     </View>
@@ -551,14 +544,17 @@ const createStyles = (palette: Palette) =>
     },
     heroActions: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: 12,
       marginTop: 24,
     },
     heroButton: {
       flex: 1,
+      minWidth: '47%',
       backgroundColor: palette.highlight,
       borderRadius: 20,
       padding: 16,
+      alignItems: 'center',
     },
     heroButtonLabel: {
       color: palette.textMuted,

@@ -26,7 +26,7 @@ type PeopleResponse = {
   people: MyPerson[];
 };
 
-export default function AllPeopleScreen() {
+export default function FavoritesScreen() {
   const palette = useThemePalette();
   const styles = useMemo(() => createStyles(palette), [palette]);
 
@@ -38,10 +38,12 @@ export default function AllPeopleScreen() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Filter to only show favorites and apply search
   const filteredPeople = useMemo(() => {
+    const favorites = people.filter((p) => p.is_favorite === true);
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return people;
-    return people.filter((person) =>
+    if (!query) return favorites;
+    return favorites.filter((person) =>
       person.name?.toLowerCase().includes(query),
     );
   }, [people, searchQuery]);
@@ -54,8 +56,8 @@ export default function AllPeopleScreen() {
       const json = (await apiGet('/api/people', token)) as PeopleResponse;
       setPeople(json.people ?? []);
     } catch (err: any) {
-      console.log('All people error:', err);
-      setError(err?.message ?? 'Unable to load people');
+      console.log('Favorites error:', err);
+      setError(err?.message ?? 'Unable to load favorites');
     } finally {
       setLoading(false);
     }
@@ -96,7 +98,7 @@ export default function AllPeopleScreen() {
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          title: 'All People',
+          title: 'Favorites',
           headerStyle: { backgroundColor: palette.surface },
           headerTitleStyle: { color: palette.text },
           headerShadowVisible: false,
@@ -111,87 +113,88 @@ export default function AllPeopleScreen() {
         {loading && people.length === 0 ? (
           <View style={styles.centered}>
             <ActivityIndicator color={palette.tint} />
-            <Text style={styles.helperText}>Loading people…</Text>
+            <Text style={styles.helperText}>Loading favorites…</Text>
           </View>
         ) : error ? (
           <Text style={styles.errorText}>{error}</Text>
-        ) : people.length === 0 ? (
-          <Text style={styles.helperText}>No people found.</Text>
+        ) : filteredPeople.length === 0 ? (
+          <View style={styles.centered}>
+            <IconSymbol name="star" size={48} color={palette.textMuted} />
+            <Text style={styles.helperText}>
+              {searchQuery ? 'No favorites match your search.' : 'No favorites yet. Mark people as favorites to see them here.'}
+            </Text>
+          </View>
         ) : (
           <>
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="Search by name"
+              placeholder="Search favorites by name"
               placeholderTextColor={palette.textMuted}
               style={styles.searchInput}
             />
-            {filteredPeople.length === 0 ? (
-              <Text style={styles.helperText}>No matches for that name.</Text>
-            ) : (
-              filteredPeople.map((p) => {
-                const { background, text } = getAvatarColors(p.gender, palette);
-                const displayName = formatPersonName(p.name);
-                const ownerName = formatPersonName(p.owner_name);
-                const initial = getNameInitial(p.name);
-                return (
-                  <TouchableOpacity
-                    key={p.id}
-                    activeOpacity={0.7}
-                    onPress={() =>
-                      router.push({ pathname: '/people/[id]', params: { id: String(p.id) } })
-                    }
-                  >
-                    <View style={styles.personCard}>
-                      <View style={[styles.avatar, { backgroundColor: background }]}>
-                        <Text style={[styles.avatarText, { color: text }]}>
-                          {initial}
-                        </Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <View style={styles.nameRow}>
-                          <Text style={styles.personName}>{displayName || p.name}</Text>
-                          <TouchableOpacity
-                            onPress={(e) => {
-                              e.stopPropagation();
-                              handleToggleFavorite(p.id, p.is_favorite ?? false);
-                            }}
-                            style={styles.favoriteButton}
-                          >
-                            <IconSymbol
-                              name={p.is_favorite ? 'star.fill' : 'star'}
-                              size={22}
-                              color={p.is_favorite ? '#FFD700' : palette.textMuted}
-                            />
-                          </TouchableOpacity>
-                        </View>
-                        <Text style={styles.personMeta}>{p.nric}</Text>
-                        {p.email && <Text style={styles.personMeta}>{p.email}</Text>}
-                        {p.phone && Array.isArray(p.phone) && p.phone.length > 0 && (
-                          <Text style={styles.personMeta}>{p.phone[0]}</Text>
-                        )}
-                        {ownerName && (
-                          <Text style={styles.personMeta}>
-                            Created by {ownerName}
-                          </Text>
-                        )}
-                        {p.age_years !== null && (
-                          <Text style={styles.personMeta}>
-                            Age: {p.age_years}{' '}
-                            {p.age_years === 1 ? 'year' : 'years'}
-                            {p.age_months && p.age_months > 0
-                              ? ` and ${p.age_months} ${
-                                  p.age_months === 1 ? 'month' : 'months'
-                                }`
-                              : ''}
-                          </Text>
-                        )}
-                      </View>
+            {filteredPeople.map((p) => {
+              const { background, text } = getAvatarColors(p.gender, palette);
+              const displayName = formatPersonName(p.name);
+              const ownerName = formatPersonName(p.owner_name);
+              const initial = getNameInitial(p.name);
+              return (
+                <TouchableOpacity
+                  key={p.id}
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    router.push({ pathname: '/people/[id]', params: { id: String(p.id) } })
+                  }
+                >
+                  <View style={styles.personCard}>
+                    <View style={[styles.avatar, { backgroundColor: background }]}>
+                      <Text style={[styles.avatarText, { color: text }]}>
+                        {initial}
+                      </Text>
                     </View>
-                  </TouchableOpacity>
-                );
-              })
-            )}
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.nameRow}>
+                        <Text style={styles.personName}>{displayName || p.name}</Text>
+                        <TouchableOpacity
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleToggleFavorite(p.id, p.is_favorite ?? false);
+                          }}
+                          style={styles.favoriteButton}
+                        >
+                          <IconSymbol
+                            name={p.is_favorite ? 'star.fill' : 'star'}
+                            size={22}
+                            color={p.is_favorite ? '#FFD700' : palette.textMuted}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={styles.personMeta}>{p.nric}</Text>
+                      {p.email && <Text style={styles.personMeta}>{p.email}</Text>}
+                      {p.phone && Array.isArray(p.phone) && p.phone.length > 0 && (
+                        <Text style={styles.personMeta}>{p.phone[0]}</Text>
+                      )}
+                      {ownerName && (
+                        <Text style={styles.personMeta}>
+                          Created by {ownerName}
+                        </Text>
+                      )}
+                      {p.age_years !== null && (
+                        <Text style={styles.personMeta}>
+                          Age: {p.age_years}{' '}
+                          {p.age_years === 1 ? 'year' : 'years'}
+                          {p.age_months && p.age_months > 0
+                            ? ` and ${p.age_months} ${
+                                p.age_months === 1 ? 'month' : 'months'
+                              }`
+                            : ''}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </>
         )}
       </ScrollView>
@@ -211,12 +214,14 @@ const createStyles = (palette: Palette) =>
     },
     centered: {
       alignItems: 'center',
-      marginTop: 24,
+      marginTop: 48,
+      gap: 12,
     },
     helperText: {
       marginTop: 12,
       color: palette.textMuted,
       textAlign: 'center',
+      fontSize: 14,
     },
     searchInput: {
       borderWidth: 1,

@@ -9,6 +9,7 @@ export type User = {
 export type DashboardStats = {
   my_people_count: number;
   all_people_count: number;
+  favorites_count: number;
 };
 
 export type UpcomingBirthday = {
@@ -33,6 +34,7 @@ export type MyPerson = {
   age_years: number | null;
   age_months: number | null;
   owner_name?: string | null;
+  is_favorite?: boolean;
 };
 
 export type DashboardData = {

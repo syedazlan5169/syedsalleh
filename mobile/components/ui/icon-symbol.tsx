@@ -39,6 +39,10 @@ const MAPPING = {
   'trash.fill': 'delete',
   'doc.on.doc': 'content-copy',
   'doc.on.doc.fill': 'content-copy',
+  'star.fill': 'star',
+  'star': 'star-border',
+  'plus': 'add',
+  'plus.circle.fill': 'add-circle',
 } as IconMapping;
 
 /**

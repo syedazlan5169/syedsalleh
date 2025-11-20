@@ -17,8 +17,9 @@ import { useThemePalette } from '@/context/ThemePreferenceContext';
 import { getAvatarColors } from '@/utils/avatar';
 import { formatPersonName, getNameInitial } from '@/utils/text';
 
-import { apiGet } from '../../apiClient';
+import { apiGet, apiPost } from '../../apiClient';
 import { useAuth } from '../../context/AuthContext';
+import { IconSymbol } from '../../components/ui/icon-symbol';
 import type { MyPerson } from '../../types/api';
 
 type PeopleResponse = {
@@ -125,10 +126,27 @@ export default function SearchPeopleTabScreen() {
                         </Text>
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.personName}>{displayName || p.name}</Text>
+                        <View style={styles.nameRow}>
+                          <Text style={styles.personName}>{displayName || p.name}</Text>
+                          <TouchableOpacity
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              handleToggleFavorite(p.id, p.is_favorite ?? false);
+                            }}
+                            style={styles.favoriteButton}
+                          >
+                            <IconSymbol
+                              name={p.is_favorite ? 'star.fill' : 'star'}
+                              size={22}
+                              color={p.is_favorite ? '#FFD700' : palette.textMuted}
+                            />
+                          </TouchableOpacity>
+                        </View>
                         <Text style={styles.personMeta}>{p.nric}</Text>
                         {p.email && <Text style={styles.personMeta}>{p.email}</Text>}
-                        {p.phone && <Text style={styles.personMeta}>{p.phone}</Text>}
+                        {p.phone && Array.isArray(p.phone) && p.phone.length > 0 && (
+                          <Text style={styles.personMeta}>{p.phone[0]}</Text>
+                        )}
                         {ownerName && (
                           <Text style={styles.personMeta}>
                             Created by {ownerName}
@@ -233,10 +251,20 @@ const createStyles = (palette: Palette) =>
       fontWeight: '700',
       fontSize: 18,
     },
+    nameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
     personName: {
       fontSize: 18,
       fontWeight: '600',
       color: palette.text,
+      flex: 1,
+    },
+    favoriteButton: {
+      padding: 4,
     },
     personMeta: {
       color: palette.textMuted,

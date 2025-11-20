@@ -10,6 +10,7 @@ use App\Support\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -86,10 +87,71 @@ if (! function_exists('send_push_notification')) {
 
             return $response->json();
         } catch (\Exception $e) {
-            \Log::error('Push notification error: '.$e->getMessage());
+            Log::error('Push notification error: '.$e->getMessage());
 
             return null;
         }
+    }
+}
+
+if (! function_exists('format_activity_value')) {
+    /**
+     * Normalize values before storing them in activity log properties.
+     *
+     * @param  mixed  $value
+     * @return mixed
+     */
+    function format_activity_value($value)
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('c');
+        }
+
+        if (is_array($value)) {
+            return array_values($value);
+        }
+
+        if (is_object($value)) {
+            if ($value instanceof \JsonSerializable) {
+                return $value->jsonSerialize();
+            }
+
+            if (method_exists($value, '__toString')) {
+                return (string) $value;
+            }
+
+            $encoded = json_encode($value);
+
+            if ($encoded === false) {
+                return null;
+            }
+
+            return json_decode($encoded, true);
+        }
+
+        return $value;
+    }
+}
+
+if (! function_exists('person_change_details')) {
+    /**
+     * Build a structured list of changes for activity logging.
+     *
+     * @param  array<string, mixed>  $dirtyAttributes
+     * @return array<string, array{old:mixed,new:mixed}>
+     */
+    function person_change_details(Person $person, array $dirtyAttributes): array
+    {
+        $changes = [];
+
+        foreach ($dirtyAttributes as $attribute => $newValue) {
+            $changes[$attribute] = [
+                'old' => format_activity_value($person->getOriginal($attribute)),
+                'new' => format_activity_value($newValue),
+            ];
+        }
+
+        return $changes;
     }
 }
 
@@ -704,9 +766,29 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
             }
         }
 
-        $person->update($data);
-        $person->loadMissing('user');
+        $person->fill($data);
+        $dirtyAttributes = $person->getDirty();
+        $changeDetails = [];
+
+        if (! empty($dirtyAttributes)) {
+            $changeDetails = person_change_details($person, $dirtyAttributes);
+            $person->save();
+        }
+
+        $person->refresh()->loadMissing('user');
         $age = $person->age_breakdown;
+
+        if (! empty($changeDetails)) {
+            ActivityLogger::log(
+                'person.updated',
+                __(':name updated person: :person_name', ['name' => $user->name, 'person_name' => $person->name]),
+                $person,
+                [
+                    'via' => 'mobile_app',
+                    'changes' => $changeDetails,
+                ]
+            );
+        }
 
         return response()->json([
             'person' => [
@@ -1594,20 +1676,33 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
             unset($data['user_id']);
         }
 
-        $person->update($data);
-        $person->loadMissing('user');
+        $person->fill($data);
+        $dirtyAttributes = $person->getDirty();
+        $changeDetails = [];
+
+        if (! empty($dirtyAttributes)) {
+            $changeDetails = person_change_details($person, $dirtyAttributes);
+            $person->save();
+        }
+
+        $person->refresh()->loadMissing('user');
         $age = $person->age_breakdown;
 
-        // Log activity
-        ActivityLogger::log(
-            'admin.person_updated',
-            __(':admin_name updated person: :person_name', [
-                'admin_name' => $request->user()->name,
-                'person_name' => $person->name,
-            ]),
-            $person,
-            ['via' => 'mobile_app']
-        );
+        if (! empty($changeDetails)) {
+            // Log activity
+            ActivityLogger::log(
+                'admin.person_updated',
+                __(':admin_name updated person: :person_name', [
+                    'admin_name' => $request->user()->name,
+                    'person_name' => $person->name,
+                ]),
+                $person,
+                [
+                    'via' => 'mobile_app',
+                    'changes' => $changeDetails,
+                ]
+            );
+        }
 
         return response()->json([
             'message' => 'Person updated successfully.',

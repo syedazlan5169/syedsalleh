@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "210533533796",
+    "project_id": "syedsalleh-360cb",
+    "storage_bucket": "syedsalleh-360cb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:210533533796:android:ccb0045ca2b7d0d8c3b771",
+        "android_client_info": {
+          "package_name": "com.syedazlan5169.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyACOWewZLlm0I18NYllWMhcZFNgRX2E1qc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

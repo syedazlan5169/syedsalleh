@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -9,8 +10,11 @@ import { useAuth } from '@/context/AuthContext';
 export default function TabLayout() {
   const palette = useThemePalette();
   const { user, token } = useAuth();
+  const insets = useSafeAreaInsets();
   const isAdmin = user?.is_admin === true;
   const isAuthenticated = !!token && !!user;
+  const safePaddingBottom = Math.max(insets.bottom, 8);
+  const tabBarHeight = 60 + insets.bottom;
 
   return (
     <Tabs
@@ -24,8 +28,8 @@ export default function TabLayout() {
               backgroundColor: palette.surface,
               borderTopColor: palette.border,
               borderTopWidth: 1,
-              height: 60,
-              paddingBottom: 8,
+              height: tabBarHeight,
+              paddingBottom: safePaddingBottom,
               paddingTop: 8,
             }
           : { display: 'none' }, // Hide tab bar when not authenticated

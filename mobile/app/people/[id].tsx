@@ -145,8 +145,7 @@ export default function PersonDetailScreen() {
   };
 
   const getDocumentActionLabel = (document: PersonDocument) => {
-    if (isPdfDocument(document)) return 'Download';
-    if (isImageDocument(document)) return 'View';
+    if (isPdfDocument(document) || isImageDocument(document)) return 'View';
     return 'Open';
   };
 

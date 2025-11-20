@@ -20,7 +20,7 @@ export type PersonFormValues = {
   blood_type: string;
   occupation: string;
   address: string;
-  phone: string;
+  phone: string[]; // Array of up to 4 phone numbers
   email: string;
 };
 
@@ -39,7 +39,7 @@ export const defaultPersonFormValues: PersonFormValues = {
   blood_type: '',
   occupation: '',
   address: '',
-  phone: '',
+  phone: ['', '', '', ''], // 4 phone number slots
   email: '',
 };
 
@@ -176,14 +176,24 @@ export function PersonForm({
         onChangeText={(text) => handleChange('occupation', text)}
         placeholder="Occupation"
       />
-      <FormField
-        palette={palette}
-        label="Phone"
-        value={values.phone}
-        onChangeText={(text) => handleChange('phone', text)}
-        placeholder="Phone number"
-        keyboardType="phone-pad"
-      />
+      <View style={styles.phoneSection}>
+        <Text style={[styles.phoneLabel, { color: palette.textMuted }]}>Phone Numbers (up to 4)</Text>
+        {[0, 1, 2, 3].map((index) => (
+          <FormField
+            key={index}
+            palette={palette}
+            label={index === 0 ? 'Phone' : `Phone ${index + 1}`}
+            value={values.phone[index] || ''}
+            onChangeText={(text) => {
+              const newPhone = [...values.phone];
+              newPhone[index] = text;
+              setValues({ ...values, phone: newPhone });
+            }}
+            placeholder={`Phone number ${index + 1}`}
+            keyboardType="phone-pad"
+          />
+        ))}
+      </View>
       <FormField
         palette={palette}
         label="Email"
@@ -289,6 +299,15 @@ const createStyles = (palette: Palette) =>
   StyleSheet.create({
     form: {
       gap: 18,
+    },
+    phoneSection: {
+      gap: 12,
+    },
+    phoneLabel: {
+      fontSize: 12,
+      textTransform: 'uppercase',
+      letterSpacing: 0.8,
+      marginBottom: 4,
     },
     submitButton: {
       marginTop: 12,

@@ -627,11 +627,35 @@ const InfoRowWithCopy = ({
   onCopy,
 }: {
   label: string;
-  value?: string | number | null;
+  value?: string | number | string[] | null;
   palette: Palette;
   onCopy: (text: string) => void;
 }) => {
   if (value === undefined || value === null || value === '') return null;
+  
+  // Handle phone array
+  if (Array.isArray(value)) {
+    const phoneNumbers = value.filter(p => p && p.trim() !== '');
+    if (phoneNumbers.length === 0) return null;
+    
+    return (
+      <View style={stylesFactory.infoRow}>
+        <Text style={[stylesFactory.infoLabel, { color: palette.textMuted }]}>{label}</Text>
+        {phoneNumbers.map((phone, index) => (
+          <View key={index} style={stylesFactory.infoValueRow}>
+            <Text style={[stylesFactory.infoValue, { color: palette.text, flex: 1 }]}>{phone}</Text>
+            <TouchableOpacity
+              onPress={() => onCopy(phone)}
+              style={stylesFactory.copyIconButton}
+            >
+              <IconSymbol name="doc.on.doc" size={14} color={palette.textMuted} />
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
+    );
+  }
+  
   const valueString = String(value);
   return (
     <View style={stylesFactory.infoRow}>

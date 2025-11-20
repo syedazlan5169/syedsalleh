@@ -571,9 +571,18 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
             'blood_type'    => ['nullable', 'string', 'max:10'],
             'occupation'    => ['nullable', 'string', 'max:255'],
             'address'       => ['nullable', 'string', 'max:500'],
-            'phone'         => ['nullable', 'string', 'max:255'],
+            'phone'         => ['nullable', 'array', 'max:4'],
+            'phone.*'       => ['nullable', 'string', 'max:255'],
             'email'         => ['nullable', 'email', 'max:255'],
         ]);
+        
+        // Filter out empty phone numbers
+        if (isset($data['phone']) && is_array($data['phone'])) {
+            $data['phone'] = array_values(array_filter($data['phone'], fn($p) => !empty(trim($p ?? ''))));
+            if (empty($data['phone'])) {
+                $data['phone'] = null;
+            }
+        }
 
         $person = $user->people()->create($data);
         $person->loadMissing('user');
@@ -669,9 +678,18 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
             'blood_type'    => ['nullable', 'string', 'max:10'],
             'occupation'    => ['nullable', 'string', 'max:255'],
             'address'       => ['nullable', 'string', 'max:500'],
-            'phone'         => ['nullable', 'string', 'max:255'],
+            'phone'         => ['nullable', 'array', 'max:4'],
+            'phone.*'       => ['nullable', 'string', 'max:255'],
             'email'         => ['nullable', 'email', 'max:255'],
         ]);
+        
+        // Filter out empty phone numbers
+        if (isset($data['phone']) && is_array($data['phone'])) {
+            $data['phone'] = array_values(array_filter($data['phone'], fn($p) => !empty(trim($p ?? ''))));
+            if (empty($data['phone'])) {
+                $data['phone'] = null;
+            }
+        }
 
         $person->update($data);
         $person->loadMissing('user');
@@ -1335,10 +1353,19 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
             'blood_type' => ['nullable', 'string', 'max:10'],
             'occupation' => ['nullable', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:500'],
-            'phone' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'array', 'max:4'],
+            'phone.*' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
+        
+        // Filter out empty phone numbers
+        if (isset($data['phone']) && is_array($data['phone'])) {
+            $data['phone'] = array_values(array_filter($data['phone'], fn($p) => !empty(trim($p ?? ''))));
+            if (empty($data['phone'])) {
+                $data['phone'] = null;
+            }
+        }
 
         if (isset($data['user_id'])) {
             $person->user_id = $data['user_id'];

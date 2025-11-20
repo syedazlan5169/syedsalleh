@@ -40,6 +40,7 @@ class Person extends Model
     {
         return [
             'date_of_birth' => 'date',
+            'phone' => 'array',
         ];
     }
 

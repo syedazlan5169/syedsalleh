@@ -27,6 +27,9 @@ export default function CreatePersonScreen() {
     setError(null);
     setSaving(true);
     try {
+      // Filter out empty phone numbers
+      const phoneNumbers = values.phone.filter(p => p && p.trim() !== '');
+      
       const payload = {
         ...values,
         date_of_birth: values.date_of_birth || null,
@@ -34,7 +37,7 @@ export default function CreatePersonScreen() {
         blood_type: values.blood_type || null,
         occupation: values.occupation || null,
         address: values.address || null,
-        phone: values.phone || null,
+        phone: phoneNumbers.length > 0 ? phoneNumbers : null,
         email: values.email || null,
       };
       const json = (await apiPost('/api/people', token, payload)) as { person: { id: number } };

@@ -19,6 +19,19 @@ type PersonResponse = {
 };
 
 function mapPersonToFormValues(person: PersonDetail): PersonFormValues {
+  // Convert phone array to form format (pad to 4 slots)
+  let phoneArray: string[] = ['', '', '', ''];
+  if (person.phone && Array.isArray(person.phone)) {
+    phoneArray = [...person.phone];
+    // Pad to 4 slots
+    while (phoneArray.length < 4) {
+      phoneArray.push('');
+    }
+  } else if (person.phone && typeof person.phone === 'string') {
+    // Legacy: single phone string
+    phoneArray[0] = person.phone;
+  }
+  
   return {
     name: person.name ?? '',
     nric: person.nric ?? '',
@@ -27,7 +40,7 @@ function mapPersonToFormValues(person: PersonDetail): PersonFormValues {
     blood_type: person.blood_type ?? '',
     occupation: person.occupation ?? '',
     address: person.address ?? '',
-    phone: person.phone ?? '',
+    phone: phoneArray.slice(0, 4), // Ensure max 4
     email: person.email ?? '',
   };
 }
@@ -79,6 +92,9 @@ export default function EditPersonScreen() {
     setError(null);
     setSaving(true);
     try {
+      // Filter out empty phone numbers
+      const phoneNumbers = values.phone.filter(p => p && p.trim() !== '');
+      
       const payload = {
         ...values,
         date_of_birth: values.date_of_birth || null,
@@ -86,7 +102,7 @@ export default function EditPersonScreen() {
         blood_type: values.blood_type || null,
         occupation: values.occupation || null,
         address: values.address || null,
-        phone: values.phone || null,
+        phone: phoneNumbers.length > 0 ? phoneNumbers : null,
         email: values.email || null,
       };
       await apiPut(`/api/people/${personId}`, token, payload);

@@ -358,18 +358,35 @@ export default function PersonDetailScreen() {
           headerTitleStyle: { color: palette.text },
           headerShadowVisible: false,
           headerRight:
-            person && user && person.owner_id === user.id && personId
+            person && user && personId
               ? () => (
-                  <TouchableOpacity
-                    onPress={() =>
-                      router.push({
-                        pathname: '/people/[id]/edit',
-                        params: { id: String(personId) },
-                      })
-                    }
-                  >
-                    <Text style={styles.headerAction}>Edit</Text>
-                  </TouchableOpacity>
+                  <View style={styles.headerActions}>
+                    {person.can_manage_documents && (
+                      <TouchableOpacity
+                        onPress={() =>
+                          router.push({
+                            pathname: '/people/[id]/share',
+                            params: { id: String(personId) },
+                          })
+                        }
+                        style={styles.headerActionButton}
+                      >
+                        <IconSymbol name="square.and.arrow.up" size={20} color={palette.tint} />
+                      </TouchableOpacity>
+                    )}
+                    {person.can_manage_documents && (
+                      <TouchableOpacity
+                        onPress={() =>
+                          router.push({
+                            pathname: '/people/[id]/edit',
+                            params: { id: String(personId) },
+                          })
+                        }
+                      >
+                        <Text style={styles.headerAction}>Edit</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 )
               : undefined,
         }}
@@ -752,10 +769,17 @@ const createStyles = (palette: Palette) =>
       borderTopColor: palette.border,
       paddingTop: 16,
     },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    headerActionButton: {
+      padding: 4,
+    },
     headerAction: {
       color: palette.tint,
       fontWeight: '600',
-      marginRight: 8,
       fontSize: 16,
     },
     documentCard: {

@@ -70,6 +70,45 @@ class Person extends Model
     }
 
     /**
+     * Get the shares for this person.
+     */
+    public function shares(): HasMany
+    {
+        return $this->hasMany(PersonShare::class);
+    }
+
+    /**
+     * Get the users with whom this person is shared.
+     */
+    public function sharedWith(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\User::class, 'person_shares', 'person_id', 'shared_with_user_id')
+            ->withPivot('shared_by_user_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Check if a user can access/manage this person.
+     * Returns true if user is owner, shared with user, or admin.
+     */
+    public function canBeAccessedBy(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if ($user->id === $this->user_id) {
+            return true;
+        }
+
+        return $this->shares()->where('shared_with_user_id', $user->id)->exists();
+    }
+
+    /**
      * Scope a query to only include people with upcoming birthdays.
      */
     public function scopeUpcomingBirthdays($query, int $days = 30)

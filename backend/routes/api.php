@@ -208,12 +208,21 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
             })
             ->values();
 
-        // My people (owned by current user)
-        $myPeople = $user->people()
+        // My people (owned by current user + shared with user)
+        $ownedPeople = $user->people()
             ->orderBy('name')
-            ->get()
-            ->map(function (Person $person) {
+            ->get();
+
+        $sharedPeople = $user->sharedPeople()
+            ->with('user')
+            ->orderBy('name')
+            ->get();
+
+        $myPeople = $ownedPeople->concat($sharedPeople)
+            ->unique('id')
+            ->map(function (Person $person) use ($user) {
                 $age = $person->age_breakdown;
+                $isShared = $person->user_id !== $user->id;
 
                 return [
                     'id'            => $person->id,
@@ -225,6 +234,8 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
                     'date_of_birth' => optional($person->date_of_birth)->toDateString(),
                     'age_years'     => $age['years'],
                     'age_months'    => $age['months'],
+                    'is_shared'     => $isShared,
+                    'owner_name'    => $isShared ? optional($person->user)->name : null,
                 ];
             })
             ->values();
@@ -526,7 +537,7 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
         $age = $person->age_breakdown;
         $documentsQuery = $person->documents()->latest();
 
-        if (! $user || ($user->id !== $person->user_id && ! $user->isAdmin())) {
+        if (! $person->canBeAccessedBy($user)) {
             $documentsQuery->where('is_public', true);
         }
 
@@ -535,7 +546,7 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
             ->map(fn (Document $document) => map_document_response($document, $request))
             ->values();
 
-        $canManageDocuments = $user && ($user->id === $person->user_id || $user->isAdmin());
+        $canManageDocuments = $person->canBeAccessedBy($user);
 
         return response()->json([
             'person' => [
@@ -725,6 +736,7 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
         /** @var \App\Models\User $user */
         $user = $request->user();
 
+        // Only owner can delete (not shared users)
         if ($person->user_id !== $user->id && ! $user->isAdmin()) {
             return response()->json([
                 'message' => 'You are not allowed to delete this person.',
@@ -759,7 +771,7 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
 
         $documentsQuery = $person->documents()->latest();
 
-        if (! $user || ($user->id !== $person->user_id && ! $user->isAdmin())) {
+        if (! $person->canBeAccessedBy($user)) {
             $documentsQuery->where('is_public', true);
         }
 
@@ -777,7 +789,7 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
         /** @var \App\Models\User|null $user */
         $user = $request->user();
 
-        if (! $user || ($user->id !== $person->user_id && ! $user->isAdmin())) {
+        if (! $person->canBeAccessedBy($user)) {
             return response()->json([
                 'message' => 'You are not allowed to upload documents for this person.',
             ], 403);
@@ -819,7 +831,7 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
 
         $document->loadMissing('person.user');
 
-        if (! $user || ($document->person->user_id !== $user->id && ! $user->isAdmin())) {
+        if (! $document->person->canBeAccessedBy($user)) {
             return response()->json([
                 'message' => 'You are not allowed to update this document.',
             ], 403);
@@ -855,7 +867,7 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
 
         $document->loadMissing('person.user');
 
-        if (! $user || ($document->person->user_id !== $user->id && ! $user->isAdmin())) {
+        if (! $document->person->canBeAccessedBy($user)) {
             return response()->json([
                 'message' => 'You are not allowed to delete this document.',
             ], 403);
@@ -1023,6 +1035,171 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
         return response()->json([
             'message' => $message,
             'is_favorite' => !$isFavorite,
+        ]);
+    });
+
+    Route::post('/people/{person}/share', function (Request $request, Person $person) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        // Only owner can share
+        if ($person->user_id !== $user->id && ! $user->isAdmin()) {
+            return response()->json([
+                'message' => 'You are not allowed to share this person.',
+            ], 403);
+        }
+
+        $data = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+        ]);
+
+        $sharedWithUserId = $data['user_id'];
+
+        // Cannot share with yourself
+        if ($sharedWithUserId === $user->id) {
+            return response()->json([
+                'message' => 'You cannot share a person with yourself.',
+            ], 400);
+        }
+
+        // Check if already shared
+        $existingShare = \App\Models\PersonShare::where('person_id', $person->id)
+            ->where('shared_with_user_id', $sharedWithUserId)
+            ->first();
+
+        if ($existingShare) {
+            return response()->json([
+                'message' => 'This person is already shared with this user.',
+            ], 400);
+        }
+
+        $share = \App\Models\PersonShare::create([
+            'person_id' => $person->id,
+            'shared_with_user_id' => $sharedWithUserId,
+            'shared_by_user_id' => $user->id,
+        ]);
+
+        $sharedWithUser = \App\Models\User::find($sharedWithUserId);
+
+        // Log activity
+        ActivityLogger::log(
+            'person.shared',
+            __(':name shared :person_name with :shared_with', [
+                'name' => $user->name,
+                'person_name' => $person->name,
+                'shared_with' => $sharedWithUser->name,
+            ]),
+            $person,
+            ['via' => 'mobile_app', 'shared_with_user_id' => $sharedWithUserId]
+        );
+
+        return response()->json([
+            'message' => 'Person shared successfully.',
+            'share' => [
+                'id' => $share->id,
+                'person_id' => $share->person_id,
+                'shared_with_user_id' => $share->shared_with_user_id,
+                'shared_with_user_name' => $sharedWithUser->name,
+                'shared_by_user_id' => $share->shared_by_user_id,
+            ],
+        ], 201);
+    });
+
+    Route::delete('/people/{person}/share/{share}', function (Request $request, Person $person, \App\Models\PersonShare $share) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        // Verify the share belongs to this person
+        if ($share->person_id !== $person->id) {
+            return response()->json([
+                'message' => 'Invalid share.',
+            ], 404);
+        }
+
+        // Only owner or the shared user can unshare
+        if ($person->user_id !== $user->id && $share->shared_with_user_id !== $user->id && ! $user->isAdmin()) {
+            return response()->json([
+                'message' => 'You are not allowed to remove this share.',
+            ], 403);
+        }
+
+        $sharedWithUser = $share->sharedWithUser;
+
+        $share->delete();
+
+        // Log activity
+        ActivityLogger::log(
+            'person.unshared',
+            __(':name removed share of :person_name with :shared_with', [
+                'name' => $user->name,
+                'person_name' => $person->name,
+                'shared_with' => $sharedWithUser->name,
+            ]),
+            $person,
+            ['via' => 'mobile_app', 'shared_with_user_id' => $share->shared_with_user_id]
+        );
+
+        return response()->noContent();
+    });
+
+    Route::get('/people/{person}/shares', function (Request $request, Person $person) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        // Only owner can view shares
+        if ($person->user_id !== $user->id && ! $user->isAdmin()) {
+            return response()->json([
+                'message' => 'You are not allowed to view shares for this person.',
+            ], 403);
+        }
+
+        $shares = $person->shares()
+            ->with(['sharedWithUser:id,name,email', 'sharedByUser:id,name,email'])
+            ->latest()
+            ->get()
+            ->map(function ($share) {
+                return [
+                    'id' => $share->id,
+                    'shared_with_user_id' => $share->shared_with_user_id,
+                    'shared_with_user_name' => optional($share->sharedWithUser)->name,
+                    'shared_with_user_email' => optional($share->sharedWithUser)->email,
+                    'shared_by_user_id' => $share->shared_by_user_id,
+                    'shared_by_user_name' => optional($share->sharedByUser)->name,
+                    'created_at' => optional($share->created_at)->toDateTimeString(),
+                ];
+            });
+
+        return response()->json([
+            'shares' => $shares,
+        ]);
+    });
+
+    Route::get('/users', function (Request $request) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+        $search = $request->string('search')->toString();
+
+        $usersQuery = \App\Models\User::query()
+            ->where('id', '!=', $user->id) // Exclude current user
+            ->whereNotNull('approved_at') // Only approved users
+            ->when($search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('name');
+
+        $users = $usersQuery->get()->map(function ($u) {
+            return [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+            ];
+        });
+
+        return response()->json([
+            'users' => $users,
         ]);
     });
 

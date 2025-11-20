@@ -43,6 +43,10 @@ const MAPPING = {
   'star': 'star-border',
   'plus': 'add',
   'plus.circle.fill': 'add-circle',
+  'plus.circle': 'add-circle-outline',
+  'checkmark.circle.fill': 'check-circle',
+  'square.and.arrow.up': 'share',
+  'square.and.arrow.up.fill': 'share',
 } as IconMapping;
 
 /**

@@ -132,4 +132,22 @@ class User extends Authenticatable
         return $this->belongsToMany(\App\Models\Person::class, 'favorites')
             ->withTimestamps();
     }
+
+    /**
+     * Get the people shared with this user.
+     */
+    public function sharedPeople(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\Person::class, 'person_shares', 'shared_with_user_id', 'person_id')
+            ->withPivot('shared_by_user_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the people this user has shared.
+     */
+    public function personShares(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\PersonShare::class, 'shared_by_user_id');
+    }
 }

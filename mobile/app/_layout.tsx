@@ -38,6 +38,7 @@ function RootLayoutInner() {
           <Stack.Screen name="people/create" options={{ title: 'Add Person' }} />
           <Stack.Screen name="people/[id]" options={{ title: 'Person Detail' }} />
           <Stack.Screen name="people/[id]/edit" options={{ title: 'Edit Person' }} />
+          <Stack.Screen name="people/[id]/share" options={{ title: 'Share Person' }} />
           <Stack.Screen name="admin/users" options={{ title: 'Manage Users' }} />
           <Stack.Screen name="admin/activity" options={{ title: 'Activity Log' }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />

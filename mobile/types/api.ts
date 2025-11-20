@@ -35,6 +35,23 @@ export type MyPerson = {
   age_months: number | null;
   owner_name?: string | null;
   is_favorite?: boolean;
+  is_shared?: boolean;
+};
+
+export type UserListItem = {
+  id: number;
+  name: string;
+  email: string;
+};
+
+export type PersonShare = {
+  id: number;
+  shared_with_user_id: number;
+  shared_with_user_name: string;
+  shared_with_user_email: string;
+  shared_by_user_id: number;
+  shared_by_user_name: string;
+  created_at: string;
 };
 
 export type DashboardData = {

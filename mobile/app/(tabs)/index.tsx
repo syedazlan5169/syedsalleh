@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Switch,
@@ -141,49 +142,37 @@ export default function HomeScreen() {
     setDashError(null);
   };
 
-  useEffect(() => {
+  const loadDashboard = useCallback(async () => {
     if (!token) {
       setDashboard(null);
       setDashError(null);
       return;
     }
 
-    let cancelled = false;
-
-    const loadDashboard = async () => {
-      try {
-        setLoadingDash(true);
-        setDashError(null);
-        const json = (await apiGet('/api/dashboard', token)) as DashboardData;
-        if (!cancelled) {
-          setDashboard(json);
-        }
-      } catch (err: any) {
-        console.log('Dashboard error:', err);
-        if (!cancelled) {
-          // Check if user needs approval
-          if (err?.message?.includes('pending admin approval') || err?.message?.includes('requires_approval')) {
-            setDashError('Your account is pending admin approval. Please wait for approval.');
-            // Logout user if they're not approved
-            logout();
-            setPassword('');
-          } else {
-            setDashError(err?.message ?? 'Failed to load dashboard');
-          }
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingDash(false);
-        }
+    try {
+      setLoadingDash(true);
+      setDashError(null);
+      const json = (await apiGet('/api/dashboard', token)) as DashboardData;
+      setDashboard(json);
+    } catch (err: any) {
+      console.log('Dashboard error:', err);
+      // Check if user needs approval
+      if (err?.message?.includes('pending admin approval') || err?.message?.includes('requires_approval')) {
+        setDashError('Your account is pending admin approval. Please wait for approval.');
+        // Logout user if they're not approved
+        logout();
+        setPassword('');
+      } else {
+        setDashError(err?.message ?? 'Failed to load dashboard');
       }
-    };
+    } finally {
+      setLoadingDash(false);
+    }
+  }, [token, logout]);
 
+  useEffect(() => {
     loadDashboard();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
+  }, [loadDashboard]);
 
 
   if (authLoading) {
@@ -376,7 +365,12 @@ export default function HomeScreen() {
           </TouchableOpacity>
         )}
       </View>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={loadingDash} onRefresh={loadDashboard} />
+        }
+      >
         <View style={styles.heroCard}>
           <Text style={styles.heroTitle}>Welcome back, {heroName || user.name}</Text>
 

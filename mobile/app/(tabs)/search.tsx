@@ -61,6 +61,24 @@ export default function SearchPeopleTabScreen() {
     }
   }, [token]);
 
+  const handleToggleFavorite = useCallback(async (personId: number, currentFavorite: boolean) => {
+    if (!token) return;
+    try {
+      const response = (await apiPost(`/api/people/${personId}/favorite`, token, {})) as {
+        message: string;
+        is_favorite: boolean;
+      };
+      
+      // Update the person in the list
+      setPeople((prev) =>
+        prev.map((p) => (p.id === personId ? { ...p, is_favorite: response.is_favorite } : p))
+      );
+    } catch (err: any) {
+      console.log('Toggle favorite error:', err);
+      // Optionally show error message
+    }
+  }, [token]);
+
   useEffect(() => {
     if (!token) {
       router.replace('/');

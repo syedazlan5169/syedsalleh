@@ -69,13 +69,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (!response.ok) {
         let message = `HTTP ${response.status}`;
+        let requiresApproval = false;
         try {
           const errJson = await response.json();
           if (errJson?.message) message = errJson.message;
+          if (errJson?.requires_approval) requiresApproval = true;
         } catch {
           // ignore
         }
-        throw new Error(message);
+        const error = new Error(message) as Error & { requiresApproval?: boolean };
+        error.requiresApproval = requiresApproval;
+        throw error;
       }
 
       const json = (await response.json()) as {

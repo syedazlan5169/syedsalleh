@@ -154,6 +154,15 @@ Route::post('/login', function (Request $request) {
     /** @var \App\Models\User $user */
     $user = Auth::user();
 
+    // Check if user is approved (admins are auto-approved)
+    if (! $user->isAdmin() && ! $user->isApproved()) {
+        Auth::logout();
+        return response()->json([
+            'message' => 'Your account is pending admin approval. Please wait for approval before signing in.',
+            'requires_approval' => true,
+        ], 403);
+    }
+
     $token = $user->createToken('mobile')->plainTextToken;
 
     // Log login activity
@@ -174,7 +183,7 @@ Route::post('/login', function (Request $request) {
     ]);
 });
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
     Route::get('/dashboard', function (Request $request) {
         /** @var \App\Models\User $user */
         $user = $request->user();

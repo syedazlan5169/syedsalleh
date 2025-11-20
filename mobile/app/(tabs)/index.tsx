@@ -123,7 +123,11 @@ export default function HomeScreen() {
       setDashError(null);
     } catch (err: any) {
       console.log('Login error:', err);
-      setLoginError(err?.message ?? 'Login failed');
+      if (err?.requiresApproval) {
+        setLoginError('Your account is pending admin approval. Please wait for approval before signing in.');
+      } else {
+        setLoginError(err?.message ?? 'Login failed');
+      }
     } finally {
       setLoadingLogin(false);
     }
@@ -157,7 +161,15 @@ export default function HomeScreen() {
       } catch (err: any) {
         console.log('Dashboard error:', err);
         if (!cancelled) {
-          setDashError(err?.message ?? 'Failed to load dashboard');
+          // Check if user needs approval
+          if (err?.message?.includes('pending admin approval') || err?.message?.includes('requires_approval')) {
+            setDashError('Your account is pending admin approval. Please wait for approval.');
+            // Logout user if they're not approved
+            logout();
+            setPassword('');
+          } else {
+            setDashError(err?.message ?? 'Failed to load dashboard');
+          }
         }
       } finally {
         if (!cancelled) {

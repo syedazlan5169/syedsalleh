@@ -8,8 +8,9 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function TabLayout() {
   const palette = useThemePalette();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const isAdmin = user?.is_admin === true;
+  const isAuthenticated = !!token && !!user;
 
   return (
     <Tabs
@@ -18,14 +19,16 @@ export default function TabLayout() {
         tabBarInactiveTintColor: palette.textMuted,
         headerShown: false,
         tabBarButton: HapticTab,
-        tabBarStyle: {
-          backgroundColor: palette.surface,
-          borderTopColor: palette.border,
-          borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
+        tabBarStyle: isAuthenticated
+          ? {
+              backgroundColor: palette.surface,
+              borderTopColor: palette.border,
+              borderTopWidth: 1,
+              height: 60,
+              paddingBottom: 8,
+              paddingTop: 8,
+            }
+          : { display: 'none' }, // Hide tab bar when not authenticated
         tabBarShowLabel: false,
       }}>
       <Tabs.Screen

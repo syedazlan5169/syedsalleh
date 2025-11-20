@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 
 import { Palette } from '@/constants/theme';
@@ -72,14 +73,21 @@ export default function ChatTabScreen() {
     }
   }, [token, router]);
 
-  useEffect(() => {
-    if (token) {
+  // Only poll for messages when the screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      if (!token) return;
+
+      // Load messages immediately when screen gains focus
       loadMessages();
-      // Poll for new messages every 3 seconds
+
+      // Poll for new messages every 3 seconds while screen is focused
       const interval = setInterval(loadMessages, 3000);
+
+      // Cleanup: stop polling when screen loses focus
       return () => clearInterval(interval);
-    }
-  }, [token, loadMessages]);
+    }, [token, loadMessages]),
+  );
 
   const handleSendMessage = async () => {
     if (!token || !messageText.trim() || sending) return;

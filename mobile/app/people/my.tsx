@@ -133,13 +133,9 @@ export default function MyPeopleScreen() {
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.personName}>{displayName || p.name}</Text>
-                        <Text style={styles.personMeta}>{p.nric}</Text>
-                        {p.email && <Text style={styles.personMeta}>{p.email}</Text>}
-                        {p.phone && <Text style={styles.personMeta}>{p.phone}</Text>}
                         {p.age_years !== null && (
                           <Text style={styles.personMeta}>
-                            Age: {p.age_years}{' '}
-                            {p.age_years === 1 ? 'year' : 'years'}
+                            {p.age_years} {p.age_years === 1 ? 'year' : 'years'}
                             {p.age_months && p.age_months > 0
                               ? ` and ${p.age_months} ${
                                   p.age_months === 1 ? 'month' : 'months'
@@ -208,6 +204,7 @@ const createStyles = (palette: Palette) =>
       shadowRadius: 12,
       elevation: 3,
       marginBottom: 8,
+      minHeight: 86,
     },
     avatar: {
       width: 50,

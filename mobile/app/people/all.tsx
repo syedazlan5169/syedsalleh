@@ -165,20 +165,9 @@ export default function AllPeopleScreen() {
                             />
                           </TouchableOpacity>
                         </View>
-                        <Text style={styles.personMeta}>{p.nric}</Text>
-                        {p.email && <Text style={styles.personMeta}>{p.email}</Text>}
-                        {p.phone && Array.isArray(p.phone) && p.phone.length > 0 && (
-                          <Text style={styles.personMeta}>{p.phone[0]}</Text>
-                        )}
-                        {ownerName && (
-                          <Text style={styles.personMeta}>
-                            Created by {ownerName}
-                          </Text>
-                        )}
                         {p.age_years !== null && (
                           <Text style={styles.personMeta}>
-                            Age: {p.age_years}{' '}
-                            {p.age_years === 1 ? 'year' : 'years'}
+                            {p.age_years} {p.age_years === 1 ? 'year' : 'years'}
                             {p.age_months && p.age_months > 0
                               ? ` and ${p.age_months} ${
                                   p.age_months === 1 ? 'month' : 'months'
@@ -247,6 +236,7 @@ const createStyles = (palette: Palette) =>
       shadowRadius: 12,
       elevation: 3,
       marginBottom: 8,
+      minHeight: 86,
     },
     avatar: {
       width: 50,

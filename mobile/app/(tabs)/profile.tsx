@@ -26,6 +26,7 @@ export default function ProfileTabScreen() {
   const router = useRouter();
 
   const [name, setName] = useState(user?.name || '');
+  const [nickname, setNickname] = useState(user?.nickname || '');
   const [email, setEmail] = useState(user?.email || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -42,6 +43,7 @@ export default function ProfileTabScreen() {
   useEffect(() => {
     if (user) {
       setName(user.name || '');
+      setNickname(user.nickname || '');
       setEmail(user.email || '');
     }
   }, [user]);
@@ -66,8 +68,9 @@ export default function ProfileTabScreen() {
     try {
       const response = (await apiPut('/api/profile', token, {
         name: name.trim(),
+        nickname: nickname.trim() || null,
         email: email.trim(),
-      })) as { user: { id: number; name: string; email: string }; message: string };
+      })) as { user: { id: number; name: string; nickname?: string | null; email: string }; message: string };
 
       updateUser(response.user);
       setProfileSuccess(true);
@@ -127,7 +130,8 @@ export default function ProfileTabScreen() {
   }
 
   const displayName = formatPersonName(user.name);
-  const hasProfileChanges = name !== user.name || email !== user.email;
+  const hasProfileChanges =
+    name !== user.name || nickname !== (user.nickname || '') || email !== user.email;
   const hasPasswordChanges = currentPassword || newPassword || confirmPassword;
 
   return (
@@ -159,6 +163,20 @@ export default function ProfileTabScreen() {
               placeholder="Enter your name"
               placeholderTextColor={palette.textMuted}
             />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Nickname (for group chat)</Text>
+            <TextInput
+              style={styles.input}
+              value={nickname}
+              onChangeText={setNickname}
+              placeholder="Enter your nickname (optional)"
+              placeholderTextColor={palette.textMuted}
+            />
+            <Text style={styles.helperText}>
+              Your nickname will be displayed in group chat. If not set, your name will be used.
+            </Text>
           </View>
 
           <View style={styles.inputGroup}>
@@ -371,6 +389,11 @@ const createStyles = (palette: Palette) =>
     successText: {
       color: '#10B981',
       fontSize: 14,
+      marginTop: 4,
+    },
+    helperText: {
+      color: palette.textMuted,
+      fontSize: 12,
       marginTop: 4,
     },
     saveButton: {

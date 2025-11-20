@@ -177,6 +177,7 @@ Route::post('/login', function (Request $request) {
         'user'  => [
             'id'       => $user->id,
             'name'     => $user->name,
+            'nickname' => $user->nickname,
             'email'    => $user->email,
             'is_admin' => $user->is_admin ?? false,
         ],
@@ -373,6 +374,7 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'nickname' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', \Illuminate\Validation\Rule::unique('users')->ignore($user->id)],
         ]);
 
@@ -390,6 +392,7 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
+                'nickname' => $user->nickname,
                 'email' => $user->email,
             ],
             'message' => 'Profile updated successfully.',
@@ -432,14 +435,14 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
         /** @var \App\Models\User $user */
         $user = $request->user();
 
-        $messages = \App\Models\Message::with('user:id,name,email')
+        $messages = \App\Models\Message::with('user:id,name,nickname,email')
             ->orderBy('created_at', 'asc')
             ->get()
             ->map(function ($message) use ($user) {
                 return [
                     'id' => $message->id,
                     'user_id' => $message->user_id,
-                    'user_name' => $message->user->name,
+                    'user_name' => $message->user->nickname ?? $message->user->name,
                     'message' => $message->message,
                     'is_own' => $message->user_id === $user->id,
                     'created_at' => $message->created_at->toISOString(),
@@ -464,12 +467,14 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
             'message' => $data['message'],
         ]);
 
-        $message->load('user:id,name,email');
+        $message->load('user:id,name,nickname,email');
+
+        $displayName = $user->nickname ?? $user->name;
 
         // Log activity
         ActivityLogger::log(
             'chat.message_sent',
-            __(':name sent a chat message', ['name' => $user->name]),
+            __(':name sent a chat message', ['name' => $displayName]),
             $message,
             ['via' => 'mobile_app']
         );
@@ -491,7 +496,7 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
             send_push_notification(
                 $pushTokens,
                 'New Message',
-                "{$user->name}: {$messagePreview}",
+                "{$displayName}: {$messagePreview}",
                 [
                     'type' => 'chat_message',
                     'message_id' => $message->id,
@@ -503,7 +508,7 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
             'message' => [
                 'id' => $message->id,
                 'user_id' => $message->user_id,
-                'user_name' => $message->user->name,
+                'user_name' => $displayName,
                 'message' => $message->message,
                 'is_own' => true,
                 'created_at' => $message->created_at->toISOString(),

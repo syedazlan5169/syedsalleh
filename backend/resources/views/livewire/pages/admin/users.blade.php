@@ -33,8 +33,8 @@ new class extends Component {
     <div class="sticky top-0 z-10 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 px-4 py-3 sm:px-6">
         <div class="flex items-center justify-between">
             <h1 class="text-xl sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100">{{ __('User Approvals') }}</h1>
-            <flux:button href="{{ route('dashboard') }}" variant="ghost" size="sm" class="text-sm sm:text-base">
-                {{ __('Back') }}
+            <flux:button href="{{ route('admin.dashboard') }}" variant="ghost" size="sm" class="text-sm sm:text-base">
+                {{ __('Back to Admin') }}
             </flux:button>
         </div>
     </div>

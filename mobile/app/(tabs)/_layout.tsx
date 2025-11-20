@@ -4,9 +4,12 @@ import React from 'react';
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useThemePalette } from '@/context/ThemePreferenceContext';
+import { useAuth } from '@/context/AuthContext';
 
 export default function TabLayout() {
   const palette = useThemePalette();
+  const { user } = useAuth();
+  const isAdmin = user?.is_admin === true;
 
   return (
     <Tabs
@@ -76,6 +79,24 @@ export default function TabLayout() {
           ),
         }}
       />
+      {isAdmin ? (
+        <Tabs.Screen
+          name="admin"
+          options={{
+            title: 'Admin',
+            tabBarIcon: ({ color, focused }) => (
+              <IconSymbol size={28} name={focused ? 'shield.fill' : 'shield'} color={color} />
+            ),
+          }}
+        />
+      ) : (
+        <Tabs.Screen
+          name="admin"
+          options={{
+            href: null, // Completely hide from tab bar for non-admins
+          }}
+        />
+      )}
     </Tabs>
   );
 }

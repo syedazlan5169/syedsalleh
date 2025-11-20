@@ -14,15 +14,22 @@
             <flux:navlist variant="outline">
                 <flux:navlist.group :heading="__('Platform')" class="grid">
                     <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Dashboard') }}</flux:navlist.item>
-                    <flux:navlist.item icon="users" :href="route('people.index')" :current="request()->routeIs('people.*')" wire:navigate>{{ __('My People') }}</flux:navlist.item>
+                    <flux:navlist.item icon="users" :href="route('people.index')" :current="request()->routeIs('people.*') && !request()->routeIs('people.all')" wire:navigate>{{ __('My People') }}</flux:navlist.item>
                     <flux:navlist.item icon="magnifying-glass" :href="route('people.all')" :current="request()->routeIs('people.all')" wire:navigate>{{ __('All People') }}</flux:navlist.item>
                     <flux:navlist.item icon="chart-bar" :href="route('statistics')" :current="request()->routeIs('statistics')" wire:navigate>{{ __('Statistics') }}</flux:navlist.item>
-                    @if(auth()->user()->isAdmin())
-                        <flux:navlist.item icon="shield-check" :href="route('admin.users')" :current="request()->routeIs('admin.users')" wire:navigate>{{ __('User Approvals') }}</flux:navlist.item>
+                </flux:navlist.group>
+                
+                @php
+                    $isAdmin = auth()->check() && auth()->user()->isAdmin();
+                @endphp
+                @if($isAdmin)
+                    <flux:navlist.group :heading="__('Administration')" class="grid">
+                        <flux:navlist.item icon="shield-check" :href="route('admin.dashboard')" :current="request()->routeIs('admin.dashboard')" wire:navigate>{{ __('Admin Dashboard') }}</flux:navlist.item>
+                        <flux:navlist.item icon="users" :href="route('admin.users')" :current="request()->routeIs('admin.users')" wire:navigate>{{ __('User Approvals') }}</flux:navlist.item>
                         <flux:navlist.item icon="light-bulb" :href="route('admin.suggestions')" :current="request()->routeIs('admin.suggestions')" wire:navigate>{{ __('Suggestions') }}</flux:navlist.item>
                         <flux:navlist.item icon="clock" :href="route('admin.activity')" :current="request()->routeIs('admin.activity')" wire:navigate>{{ __('Activity Log') }}</flux:navlist.item>
-                    @endif
-                </flux:navlist.group>
+                    </flux:navlist.group>
+                @endif
             </flux:navlist>
 
             <flux:spacer />

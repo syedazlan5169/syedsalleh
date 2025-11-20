@@ -6,6 +6,7 @@ use App\Models\Document;
 use App\Models\Notification;
 use App\Models\User;
 use App\Models\Person;
+use App\Support\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -100,6 +101,44 @@ Route::get('/ping', function () {
     ]);
 });
 
+Route::post('/register', function (Request $request) {
+    $data = $request->validate([
+        'name' => ['required', 'string', 'max:255'],
+        'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+        'password' => ['required', 'string', 'min:8', 'confirmed'],
+    ]);
+
+    $user = User::create([
+        'name' => $data['name'],
+        'email' => $data['email'],
+        'password' => \Illuminate\Support\Facades\Hash::make($data['password']),
+        'is_admin' => false,
+        'approved_at' => null, // New users need admin approval
+    ]);
+
+    // Log registration activity
+    ActivityLogger::log(
+        'auth.register',
+        __('New user registered: :name (:email)', [
+            'name' => $user->name,
+            'email' => $user->email,
+        ]),
+        $user,
+        ['via' => 'mobile_app']
+    );
+
+    return response()->json([
+        'message' => 'Registration successful. Your account is pending admin approval.',
+        'user' => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'is_admin' => false,
+            'is_approved' => false,
+        ],
+    ], 201);
+});
+
 Route::post('/login', function (Request $request) {
     $credentials = $request->validate([
         'email'    => ['required', 'email'],
@@ -117,12 +156,20 @@ Route::post('/login', function (Request $request) {
 
     $token = $user->createToken('mobile')->plainTextToken;
 
+    // Log login activity
+    ActivityLogger::log(
+        'auth.login',
+        __(':name logged in via mobile app', ['name' => $user->name]),
+        $user
+    );
+
     return response()->json([
         'token' => $token,
         'user'  => [
-            'id'    => $user->id,
-            'name'  => $user->name,
-            'email' => $user->email,
+            'id'       => $user->id,
+            'name'     => $user->name,
+            'email'    => $user->email,
+            'is_admin' => $user->is_admin ?? false,
         ],
     ]);
 });
@@ -322,6 +369,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
         $user->update($data);
 
+        // Log activity
+        ActivityLogger::log(
+            'profile.updated',
+            __(':name updated their profile', ['name' => $user->name]),
+            $user,
+            ['via' => 'mobile_app']
+        );
+
         return response()->json([
             'user' => [
                 'id' => $user->id,
@@ -350,6 +405,14 @@ Route::middleware('auth:sanctum')->group(function () {
         $user->update([
             'password' => \Illuminate\Support\Facades\Hash::make($data['password']),
         ]);
+
+        // Log activity
+        ActivityLogger::log(
+            'profile.password_changed',
+            __(':name changed their password', ['name' => $user->name]),
+            $user,
+            ['via' => 'mobile_app']
+        );
 
         return response()->json([
             'message' => 'Password updated successfully.',
@@ -393,6 +456,14 @@ Route::middleware('auth:sanctum')->group(function () {
         ]);
 
         $message->load('user:id,name,email');
+
+        // Log activity
+        ActivityLogger::log(
+            'chat.message_sent',
+            __(':name sent a chat message', ['name' => $user->name]),
+            $message,
+            ['via' => 'mobile_app']
+        );
 
         // Send push notifications to all users except the sender
         $allUsers = \App\Models\User::where('id', '!=', $user->id)->get();
@@ -493,6 +564,14 @@ Route::middleware('auth:sanctum')->group(function () {
         $person = $user->people()->create($data);
         $person->loadMissing('user');
         $age = $person->age_breakdown;
+
+        // Log activity
+        ActivityLogger::log(
+            'person.created',
+            __(':name created a new person: :person_name', ['name' => $user->name, 'person_name' => $person->name]),
+            $person,
+            ['via' => 'mobile_app']
+        );
 
         // Create notifications for all users
         $allUsers = User::all();
@@ -619,6 +698,8 @@ Route::middleware('auth:sanctum')->group(function () {
         }
 
         $person->loadMissing('documents');
+        $personName = $person->name;
+        $personId = $person->id;
 
         foreach ($person->documents as $document) {
             Storage::disk('public')->delete($document->file_path);
@@ -626,6 +707,14 @@ Route::middleware('auth:sanctum')->group(function () {
         }
 
         $person->delete();
+
+        // Log activity
+        ActivityLogger::log(
+            'person.deleted',
+            __(':name deleted person: :person_name', ['name' => $user->name, 'person_name' => $personName]),
+            null,
+            ['person_id' => $personId, 'via' => 'mobile_app']
+        );
 
         return response()->noContent();
     });
@@ -673,6 +762,18 @@ Route::middleware('auth:sanctum')->group(function () {
             'is_public' => (bool) ($validated['is_public'] ?? false),
         ]);
 
+        // Log activity
+        ActivityLogger::log(
+            'document.created',
+            __(':name uploaded document ":doc_name" for :person_name', [
+                'name' => $user->name,
+                'doc_name' => $document->name,
+                'person_name' => $person->name,
+            ]),
+            $document,
+            ['via' => 'mobile_app']
+        );
+
         return response()->json([
             'document' => map_document_response($document, $request),
         ], 201);
@@ -698,6 +799,17 @@ Route::middleware('auth:sanctum')->group(function () {
             'is_public' => $data['is_public'],
         ]);
 
+        // Log activity
+        ActivityLogger::log(
+            'document.updated',
+            __(':name updated document ":doc_name" visibility', [
+                'name' => $user->name,
+                'doc_name' => $document->name,
+            ]),
+            $document,
+            ['via' => 'mobile_app', 'is_public' => $data['is_public']]
+        );
+
         return response()->json([
             'document' => map_document_response($document, $request),
         ]);
@@ -715,8 +827,22 @@ Route::middleware('auth:sanctum')->group(function () {
             ], 403);
         }
 
+        $documentName = $document->name;
+        $documentId = $document->id;
+
         Storage::disk('public')->delete($document->file_path);
         $document->delete();
+
+        // Log activity
+        ActivityLogger::log(
+            'document.deleted',
+            __(':name deleted document ":doc_name"', [
+                'name' => $user->name,
+                'doc_name' => $documentName,
+            ]),
+            null,
+            ['document_id' => $documentId, 'via' => 'mobile_app']
+        );
 
         return response()->noContent();
     });
@@ -866,6 +992,571 @@ Route::get('/people', function (Request $request) {
     ]);
 });
 
+// Admin routes (only for admins)
+Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
+    // User Management
+    Route::get('/users', function (Request $request) {
+        $search = $request->string('search')->toString();
+        $status = $request->string('status')->toString(); // 'all', 'approved', 'pending'
 
+        $usersQuery = User::query()
+            ->withCount('people')
+            ->when($search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->when($status === 'approved', function ($query) {
+                $query->whereNotNull('approved_at');
+            })
+            ->when($status === 'pending', function ($query) {
+                $query->whereNull('approved_at')->where('is_admin', false);
+            })
+            ->latest();
 
+        $users = $usersQuery->get()->map(function (User $user) {
+            // Count documents through people
+            $documentsCount = \App\Models\Document::whereHas('person', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })->count();
 
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'is_admin' => $user->is_admin,
+                'is_approved' => $user->isApproved(),
+                'approved_at' => optional($user->approved_at)->toDateTimeString(),
+                'people_count' => $user->people_count,
+                'documents_count' => $documentsCount,
+                'created_at' => optional($user->created_at)->toDateTimeString(),
+            ];
+        })->values();
+
+        return response()->json([
+            'users' => $users,
+        ]);
+    });
+
+    Route::get('/users/{user}', function (Request $request, User $user) {
+        $user->loadCount(['people', 'notifications', 'messages']);
+        
+        // Count documents through people
+        $documentsCount = \App\Models\Document::whereHas('person', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->count();
+
+        return response()->json([
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'is_admin' => $user->is_admin,
+                'is_approved' => $user->isApproved(),
+                'approved_at' => optional($user->approved_at)->toDateTimeString(),
+                'people_count' => $user->people_count,
+                'documents_count' => $documentsCount,
+                'notifications_count' => $user->notifications_count,
+                'messages_count' => $user->messages_count,
+                'created_at' => optional($user->created_at)->toDateTimeString(),
+                'updated_at' => optional($user->updated_at)->toDateTimeString(),
+            ],
+        ]);
+    });
+
+    Route::post('/users/{user}/approve', function (Request $request, User $user) {
+        if ($user->isApproved()) {
+            return response()->json([
+                'message' => 'User is already approved.',
+            ], 422);
+        }
+
+        $user->update(['approved_at' => now()]);
+
+        // Log activity
+        ActivityLogger::log(
+            'admin.user_approved',
+            __(':admin_name approved user: :user_name', [
+                'admin_name' => $request->user()->name,
+                'user_name' => $user->name,
+            ]),
+            $user,
+            ['via' => 'mobile_app']
+        );
+
+        return response()->json([
+            'message' => 'User approved successfully.',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'is_approved' => $user->isApproved(),
+                'approved_at' => optional($user->approved_at)->toDateTimeString(),
+            ],
+        ]);
+    });
+
+    Route::post('/users/{user}/reject', function (Request $request, User $user) {
+        /** @var \App\Models\User $admin */
+        $admin = $request->user();
+
+        if ($user->id === $admin->id) {
+            return response()->json([
+                'message' => 'You cannot reject your own account.',
+            ], 422);
+        }
+
+        if ($user->isAdmin()) {
+            return response()->json([
+                'message' => 'You cannot reject an admin account.',
+            ], 422);
+        }
+
+        $userName = $user->name;
+        $userEmail = $user->email;
+        $userId = $user->id;
+
+        $user->delete();
+
+        // Log activity
+        ActivityLogger::log(
+            'admin.user_rejected',
+            __(':admin_name rejected and deleted user: :user_name', [
+                'admin_name' => $request->user()->name,
+                'user_name' => $userName,
+            ]),
+            null,
+            ['user_id' => $userId, 'user_email' => $userEmail, 'via' => 'mobile_app']
+        );
+
+        return response()->json([
+            'message' => 'User rejected and deleted successfully.',
+        ]);
+    });
+
+    Route::post('/users/{user}/make-admin', function (Request $request, User $user) {
+        if ($user->isAdmin()) {
+            return response()->json([
+                'message' => 'User is already an admin.',
+            ], 422);
+        }
+
+        $user->update([
+            'is_admin' => true,
+            'approved_at' => now(), // Auto-approve admins
+        ]);
+
+        // Log activity
+        ActivityLogger::log(
+            'admin.user_promoted',
+            __(':admin_name promoted :user_name to admin', [
+                'admin_name' => $request->user()->name,
+                'user_name' => $user->name,
+            ]),
+            $user,
+            ['via' => 'mobile_app']
+        );
+
+        return response()->json([
+            'message' => 'User promoted to admin successfully.',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'is_admin' => $user->is_admin,
+                'is_approved' => $user->isApproved(),
+            ],
+        ]);
+    });
+
+    Route::post('/users/{user}/remove-admin', function (Request $request, User $user) {
+        /** @var \App\Models\User $admin */
+        $admin = $request->user();
+
+        if ($user->id === $admin->id) {
+            return response()->json([
+                'message' => 'You cannot remove admin privileges from your own account.',
+            ], 422);
+        }
+
+        if (! $user->isAdmin()) {
+            return response()->json([
+                'message' => 'User is not an admin.',
+            ], 422);
+        }
+
+        $user->update(['is_admin' => false]);
+
+        // Log activity
+        ActivityLogger::log(
+            'admin.admin_removed',
+            __(':admin_name removed admin privileges from :user_name', [
+                'admin_name' => $request->user()->name,
+                'user_name' => $user->name,
+            ]),
+            $user,
+            ['via' => 'mobile_app']
+        );
+
+        return response()->json([
+            'message' => 'Admin privileges removed successfully.',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'is_admin' => $user->is_admin,
+            ],
+        ]);
+    });
+
+    Route::delete('/users/{user}', function (Request $request, User $user) {
+        /** @var \App\Models\User $admin */
+        $admin = $request->user();
+
+        if ($user->id === $admin->id) {
+            return response()->json([
+                'message' => 'You cannot delete your own account.',
+            ], 422);
+        }
+
+        if ($user->isAdmin()) {
+            return response()->json([
+                'message' => 'You cannot delete an admin account. Remove admin privileges first.',
+            ], 422);
+        }
+
+        // Delete associated data
+        $user->people()->each(function ($person) {
+            $person->documents()->each(function ($document) {
+                Storage::disk('public')->delete($document->file_path);
+                $document->delete();
+            });
+            $person->delete();
+        });
+
+        $user->notifications()->delete();
+        $user->deviceTokens()->delete();
+        $user->messages()->delete();
+        $user->suggestions()->delete();
+
+        $userName = $user->name;
+        $userEmail = $user->email;
+        $userId = $user->id;
+
+        $user->delete();
+
+        // Log activity
+        ActivityLogger::log(
+            'admin.user_deleted',
+            __(':admin_name deleted user: :user_name', [
+                'admin_name' => $request->user()->name,
+                'user_name' => $userName,
+            ]),
+            null,
+            ['user_id' => $userId, 'user_email' => $userEmail, 'via' => 'mobile_app']
+        );
+
+        return response()->noContent();
+    });
+
+    // People Management (Admin can manage all people)
+    Route::get('/people', function (Request $request) {
+        $search = $request->string('search')->toString();
+        $userId = $request->integer('user_id', 0);
+
+        $peopleQuery = Person::query()
+            ->with('user')
+            ->when($search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('nric', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->when($userId > 0, function ($query) use ($userId) {
+                $query->where('user_id', $userId);
+            })
+            ->latest();
+
+        $people = $peopleQuery->get()->map(function (Person $person) {
+            $age = $person->age_breakdown;
+
+            return [
+                'id' => $person->id,
+                'name' => $person->name,
+                'nric' => $person->nric,
+                'email' => $person->email,
+                'phone' => $person->phone,
+                'gender' => $person->gender,
+                'blood_type' => $person->blood_type,
+                'occupation' => $person->occupation,
+                'address' => $person->address,
+                'date_of_birth' => optional($person->date_of_birth)->toDateString(),
+                'age_years' => $age['years'],
+                'age_months' => $age['months'],
+                'owner_id' => $person->user_id,
+                'owner_name' => optional($person->user)->name,
+                'created_at' => optional($person->created_at)->toDateTimeString(),
+                'updated_at' => optional($person->updated_at)->toDateTimeString(),
+            ];
+        })->values();
+
+        return response()->json([
+            'people' => $people,
+        ]);
+    });
+
+    Route::put('/people/{person}', function (Request $request, Person $person) {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'nric' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('people', 'nric')->ignore($person->id),
+            ],
+            'date_of_birth' => ['nullable', 'date'],
+            'gender' => ['nullable', 'string', 'max:50'],
+            'blood_type' => ['nullable', 'string', 'max:10'],
+            'occupation' => ['nullable', 'string', 'max:255'],
+            'address' => ['nullable', 'string', 'max:500'],
+            'phone' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'user_id' => ['nullable', 'integer', 'exists:users,id'],
+        ]);
+
+        if (isset($data['user_id'])) {
+            $person->user_id = $data['user_id'];
+            unset($data['user_id']);
+        }
+
+        $person->update($data);
+        $person->loadMissing('user');
+        $age = $person->age_breakdown;
+
+        // Log activity
+        ActivityLogger::log(
+            'admin.person_updated',
+            __(':admin_name updated person: :person_name', [
+                'admin_name' => $request->user()->name,
+                'person_name' => $person->name,
+            ]),
+            $person,
+            ['via' => 'mobile_app']
+        );
+
+        return response()->json([
+            'message' => 'Person updated successfully.',
+            'person' => [
+                'id' => $person->id,
+                'name' => $person->name,
+                'nric' => $person->nric,
+                'email' => $person->email,
+                'phone' => $person->phone,
+                'gender' => $person->gender,
+                'blood_type' => $person->blood_type,
+                'occupation' => $person->occupation,
+                'address' => $person->address,
+                'date_of_birth' => optional($person->date_of_birth)->toDateString(),
+                'age_years' => $age['years'],
+                'age_months' => $age['months'],
+                'owner_id' => $person->user_id,
+                'owner_name' => optional($person->user)->name,
+                'created_at' => optional($person->created_at)->toDateTimeString(),
+                'updated_at' => optional($person->updated_at)->toDateTimeString(),
+            ],
+        ]);
+    });
+
+    Route::delete('/people/{person}', function (Request $request, Person $person) {
+        $person->loadMissing('documents');
+        $personName = $person->name;
+        $personId = $person->id;
+
+        foreach ($person->documents as $document) {
+            Storage::disk('public')->delete($document->file_path);
+            $document->delete();
+        }
+
+        $person->delete();
+
+        // Log activity
+        ActivityLogger::log(
+            'admin.person_deleted',
+            __(':admin_name deleted person: :person_name', [
+                'admin_name' => $request->user()->name,
+                'person_name' => $personName,
+            ]),
+            null,
+            ['person_id' => $personId, 'via' => 'mobile_app']
+        );
+
+        return response()->json([
+            'message' => 'Person deleted successfully.',
+        ]);
+    });
+
+    // Documents Management
+    Route::get('/documents', function (Request $request) {
+        $search = $request->string('search')->toString();
+        $personId = $request->integer('person_id', 0);
+        $isPublic = $request->boolean('is_public', null);
+
+        $documentsQuery = Document::query()
+            ->with('person.user')
+            ->when($search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('original_name', 'like', "%{$search}%");
+                });
+            })
+            ->when($personId > 0, function ($query) use ($personId) {
+                $query->where('person_id', $personId);
+            })
+            ->when($isPublic !== null, function ($query) use ($isPublic) {
+                $query->where('is_public', $isPublic);
+            })
+            ->latest();
+
+        $documents = $documentsQuery->get()->map(function (Document $document) use ($request) {
+            return array_merge(
+                map_document_response($document, $request),
+                [
+                    'person_id' => $document->person_id,
+                    'person_name' => optional($document->person)->name,
+                    'owner_name' => optional(optional($document->person)->user)->name,
+                ]
+            );
+        })->values();
+
+        return response()->json([
+            'documents' => $documents,
+        ]);
+    });
+
+    Route::delete('/documents/{document}', function (Request $request, Document $document) {
+        $documentName = $document->name;
+        $documentId = $document->id;
+
+        Storage::disk('public')->delete($document->file_path);
+        $document->delete();
+
+        // Log activity
+        ActivityLogger::log(
+            'admin.document_deleted',
+            __(':admin_name deleted document ":doc_name"', [
+                'admin_name' => $request->user()->name,
+                'doc_name' => $documentName,
+            ]),
+            null,
+            ['document_id' => $documentId, 'via' => 'mobile_app']
+        );
+
+        return response()->json([
+            'message' => 'Document deleted successfully.',
+        ]);
+    });
+
+    // Admin Statistics
+    Route::get('/statistics', function (Request $request) {
+        $totalUsers = User::count();
+        $totalAdmins = User::where('is_admin', true)->count();
+        $totalApprovedUsers = User::whereNotNull('approved_at')->count();
+        $pendingUsers = User::whereNull('approved_at')->where('is_admin', false)->count();
+        $totalPeople = Person::count();
+        $totalDocuments = Document::count();
+        $publicDocuments = Document::where('is_public', true)->count();
+        $privateDocuments = Document::where('is_public', false)->count();
+
+        $usersThisMonth = User::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+        $peopleThisMonth = Person::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+        $documentsThisMonth = Document::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+
+        $topUsers = User::withCount('people')
+            ->having('people_count', '>', 0)
+            ->orderBy('people_count', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(fn ($u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'people_count' => $u->people_count,
+            ]);
+
+        $recentUsers = User::latest()
+            ->limit(10)
+            ->get()
+            ->map(fn ($u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'is_admin' => $u->is_admin,
+                'is_approved' => $u->isApproved(),
+                'created_at' => optional($u->created_at)->toDateTimeString(),
+            ]);
+
+        return response()->json([
+            'overview' => [
+                'total_users' => $totalUsers,
+                'total_admins' => $totalAdmins,
+                'total_approved_users' => $totalApprovedUsers,
+                'pending_users' => $pendingUsers,
+                'total_people' => $totalPeople,
+                'total_documents' => $totalDocuments,
+                'public_documents' => $publicDocuments,
+                'private_documents' => $privateDocuments,
+                'users_this_month' => $usersThisMonth,
+                'people_this_month' => $peopleThisMonth,
+                'documents_this_month' => $documentsThisMonth,
+            ],
+            'top_users' => $topUsers,
+            'recent_users' => $recentUsers,
+        ]);
+    });
+
+    // Activity Log
+    Route::get('/activity-logs', function (Request $request) {
+        $perPage = $request->integer('per_page', 50);
+        $page = $request->integer('page', 1);
+
+        $logs = \App\Models\ActivityLog::with('user')
+            ->orderByDesc('occurred_at')
+            ->skip(($page - 1) * $perPage)
+            ->take($perPage)
+            ->get()
+            ->map(function ($log) {
+                return [
+                    'id' => $log->id,
+                    'user_id' => $log->user_id,
+                    'user_name' => optional($log->user)->name ?? 'System',
+                    'action' => $log->action,
+                    'description' => $log->description,
+                    'subject_type' => $log->subject_type,
+                    'subject_id' => $log->subject_id,
+                    'properties' => $log->properties,
+                    'ip_address' => $log->ip_address,
+                    'occurred_at' => optional($log->occurred_at)->toDateTimeString(),
+                    'created_at' => optional($log->created_at)->toDateTimeString(),
+                ];
+            })
+            ->values();
+
+        $total = \App\Models\ActivityLog::count();
+
+        return response()->json([
+            'logs' => $logs,
+            'total' => $total,
+            'per_page' => $perPage,
+            'page' => $page,
+            'has_more' => ($page * $perPage) < $total,
+        ]);
+    });
+});

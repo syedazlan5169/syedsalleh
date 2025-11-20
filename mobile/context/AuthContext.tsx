@@ -20,6 +20,7 @@ type AuthContextValue = {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  register: (name: string, email: string, password: string, passwordConfirmation: string) => Promise<void>;
   logout: () => void;
   getRememberedEmail: () => Promise<string | null>;
   updateUser: (user: User) => void;
@@ -100,6 +101,51 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     [],
   );
 
+  const register = useCallback(
+    async (name: string, email: string, password: string, passwordConfirmation: string) => {
+      const response = await fetch(`${API_BASE_URL}/api/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          password_confirmation: passwordConfirmation,
+        }),
+      });
+
+      if (!response.ok) {
+        let message = `HTTP ${response.status}`;
+        try {
+          const errJson = await response.json();
+          if (errJson?.message) {
+            message = errJson.message;
+          } else if (errJson?.errors) {
+            // Handle validation errors
+            const errorMessages = Object.values(errJson.errors).flat() as string[];
+            message = errorMessages.join(', ');
+          }
+        } catch {
+          // ignore
+        }
+        throw new Error(message);
+      }
+
+      const json = (await response.json()) as {
+        message: string;
+        user: User;
+      };
+
+      // Don't auto-login after registration (user needs approval)
+      // Just show success message
+      return;
+    },
+    [],
+  );
+
   const logout = useCallback(async () => {
     setToken(null);
     setUser(null);
@@ -133,11 +179,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       user,
       isLoading,
       login,
+      register,
       logout,
       getRememberedEmail,
       updateUser,
     }),
-    [token, user, isLoading, login, logout, getRememberedEmail, updateUser],
+    [token, user, isLoading, login, register, logout, getRememberedEmail, updateUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

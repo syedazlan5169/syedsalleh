@@ -28,17 +28,27 @@ export default function HomeScreen() {
   const palette = useThemePalette();
   const styles = useMemo(() => createStyles(palette), [palette]);
 
-  // --- Login state ---
+  // --- Auth state ---
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [loadingLogin, setLoadingLogin] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [registerSuccess, setRegisterSuccess] = useState(false);
 
-  const { token, user, isLoading: authLoading, login, logout, getRememberedEmail } = useAuth();
+  const { token, user, isLoading: authLoading, login, register, logout, getRememberedEmail } = useAuth();
 
-  // Load remembered email on mount
+  // Load remembered email on mount (only for login mode)
   useEffect(() => {
+    if (isRegisterMode) {
+      // Clear email when in register mode
+      setEmail('');
+      return;
+    }
+
     const loadRememberedEmail = async () => {
       const rememberedEmail = await getRememberedEmail();
       if (rememberedEmail) {
@@ -47,7 +57,7 @@ export default function HomeScreen() {
       }
     };
     loadRememberedEmail();
-  }, [getRememberedEmail]);
+  }, [getRememberedEmail, isRegisterMode]);
 
   // --- Dashboard state ---
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
@@ -55,8 +65,49 @@ export default function HomeScreen() {
   const [dashError, setDashError] = useState<string | null>(null);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
+  const handleRegister = async () => {
+    setLoginError(null);
+    setRegisterSuccess(false);
+
+    if (!name.trim() || !email.trim() || !password || !passwordConfirmation) {
+      setLoginError('All fields are required');
+      return;
+    }
+
+    if (password.length < 8) {
+      setLoginError('Password must be at least 8 characters');
+      return;
+    }
+
+    if (password !== passwordConfirmation) {
+      setLoginError('Passwords do not match');
+      return;
+    }
+
+    setLoadingLogin(true);
+    try {
+      await register(name.trim(), email.trim(), password, passwordConfirmation);
+      setRegisterSuccess(true);
+      // Clear form
+      setName('');
+      setEmail('');
+      setPassword('');
+      setPasswordConfirmation('');
+      // Switch back to login mode after 3 seconds
+      setTimeout(() => {
+        setIsRegisterMode(false);
+        setRegisterSuccess(false);
+      }, 3000);
+    } catch (err: any) {
+      setLoginError(err?.message ?? 'Registration failed');
+    } finally {
+      setLoadingLogin(false);
+    }
+  };
+
   const handleLogin = async () => {
     setLoginError(null);
+    setRegisterSuccess(false);
 
     if (!email || !password) {
       setLoginError('Please fill in both email and password.');
@@ -145,13 +196,31 @@ export default function HomeScreen() {
         </View>
         <View style={styles.authHeader}>
           <Text style={styles.brandBadge}>Syed Salleh</Text>
-          <Text style={styles.authTitle}>Secure access to your people data</Text>
+          <Text style={styles.authTitle}>
+            {isRegisterMode ? 'Create an account' : 'Secure access to your people data'}
+          </Text>
           <Text style={styles.authSubtitle}>
-            Sign in with your corporate credentials to continue.
+            {isRegisterMode
+              ? 'Enter your details below to create your account'
+              : 'Sign in with your corporate credentials to continue.'}
           </Text>
         </View>
 
         <View style={styles.authCard}>
+          {isRegisterMode && (
+            <>
+              <Text style={styles.authLabel}>Name</Text>
+              <TextInput
+                style={styles.authInput}
+                placeholder="Full name"
+                placeholderTextColor={palette.textMuted}
+                autoCapitalize="words"
+                value={name}
+                onChangeText={setName}
+              />
+            </>
+          )}
+
           <Text style={styles.authLabel}>Email</Text>
           <TextInput
             style={styles.authInput}
@@ -166,37 +235,84 @@ export default function HomeScreen() {
           <Text style={styles.authLabel}>Password</Text>
           <TextInput
             style={styles.authInput}
-            placeholder="••••••••"
+            placeholder={isRegisterMode ? 'At least 8 characters' : '••••••••'}
             placeholderTextColor={palette.textMuted}
             secureTextEntry
             value={password}
             onChangeText={setPassword}
           />
 
-          <View style={styles.rememberMeRow}>
-            <Text style={[styles.rememberMeLabel, { color: palette.text }]}>
-              Remember me
-            </Text>
-            <Switch
-              value={rememberMe}
-              onValueChange={setRememberMe}
-              trackColor={{ false: palette.border, true: palette.tint }}
-              thumbColor={rememberMe ? palette.tint : '#fff'}
-            />
-          </View>
+          {isRegisterMode && (
+            <>
+              <Text style={styles.authLabel}>Confirm Password</Text>
+              <TextInput
+                style={styles.authInput}
+                placeholder="Confirm password"
+                placeholderTextColor={palette.textMuted}
+                secureTextEntry
+                value={passwordConfirmation}
+                onChangeText={setPasswordConfirmation}
+              />
+            </>
+          )}
+
+          {!isRegisterMode && (
+            <View style={styles.rememberMeRow}>
+              <Text style={[styles.rememberMeLabel, { color: palette.text }]}>
+                Remember me
+              </Text>
+              <Switch
+                value={rememberMe}
+                onValueChange={setRememberMe}
+                trackColor={{ false: palette.border, true: palette.tint }}
+                thumbColor={rememberMe ? palette.tint : '#fff'}
+              />
+            </View>
+          )}
 
           {loginError && <Text style={styles.errorText}>{loginError}</Text>}
+          {registerSuccess && (
+            <View style={styles.successContainer}>
+              <Text style={styles.successText}>
+                Registration successful! Your account is pending admin approval. You can sign in once approved.
+              </Text>
+            </View>
+          )}
 
           <TouchableOpacity
             style={[styles.primaryButton, loadingLogin && styles.buttonDisabled]}
-            onPress={handleLogin}
+            onPress={isRegisterMode ? handleRegister : handleLogin}
             disabled={loadingLogin}
           >
             {loadingLogin ? (
               <ActivityIndicator color="#ffffff" />
             ) : (
-              <Text style={styles.primaryButtonText}>Sign in</Text>
+              <Text style={styles.primaryButtonText}>
+                {isRegisterMode ? 'Create Account' : 'Sign in'}
+              </Text>
             )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.switchAuthButton}
+            onPress={() => {
+              setIsRegisterMode(!isRegisterMode);
+              setLoginError(null);
+              setRegisterSuccess(false);
+              setPassword('');
+              setPasswordConfirmation('');
+              // Clear email when switching to register mode
+              if (!isRegisterMode) {
+                setEmail('');
+                setName('');
+              }
+            }}
+          >
+            <Text style={styles.switchAuthText}>
+              {isRegisterMode
+                ? 'Already have an account? Sign in'
+                : "Don't have an account? Create one"}
+            </Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -557,6 +673,29 @@ const createStyles = (palette: Palette) =>
       marginTop: 12,
       color: palette.danger,
       fontSize: 13,
+    },
+    successContainer: {
+      marginTop: 12,
+      padding: 12,
+      borderRadius: 12,
+      backgroundColor: '#10B98120',
+      borderWidth: 1,
+      borderColor: '#10B98140',
+    },
+    successText: {
+      color: '#10B981',
+      fontSize: 13,
+      lineHeight: 18,
+    },
+    switchAuthButton: {
+      marginTop: 16,
+      alignItems: 'center',
+      paddingVertical: 12,
+    },
+    switchAuthText: {
+      color: palette.tint,
+      fontSize: 14,
+      fontWeight: '500',
     },
     authScreen: {
       flex: 1,

@@ -28,6 +28,11 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  'shield.fill': 'admin-panel-settings',
+  'shield': 'admin-panel-settings',
+  'clock': 'schedule',
+  'info.circle': 'info',
+  'doc.text': 'description',
 } as IconMapping;
 
 /**

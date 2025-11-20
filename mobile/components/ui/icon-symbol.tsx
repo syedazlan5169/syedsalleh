@@ -37,6 +37,8 @@ const MAPPING = {
   'eye.fill': 'visibility',
   'trash': 'delete',
   'trash.fill': 'delete',
+  'doc.on.doc': 'content-copy',
+  'doc.on.doc.fill': 'content-copy',
 } as IconMapping;
 
 /**

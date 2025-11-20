@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
@@ -149,6 +150,13 @@ export default function PersonDetailScreen() {
     if (isPdfDocument(document) || isImageDocument(document)) return 'View';
     return 'Open';
   };
+
+  const handleCopyToClipboard = useCallback(async (text: string) => {
+    if (!text) return;
+    await Clipboard.setStringAsync(text);
+    // Show a brief feedback (you could use a toast library here)
+    Alert.alert('Copied', 'Copied to clipboard');
+  }, []);
 
   const handleOpenDocument = async (url: string) => {
     try {
@@ -385,13 +393,23 @@ export default function PersonDetailScreen() {
           <View style={styles.card}>
             {renderAvatar(person)}
             <Text style={styles.name}>{formattedPersonName || person.name || ''}</Text>
-            <Text style={styles.subtitle}>NRIC: {person.nric}</Text>
+            <View style={styles.nricRow}>
+              <Text style={styles.subtitle}>NRIC: {person.nric}</Text>
+              {person.nric && (
+                <TouchableOpacity
+                  onPress={() => handleCopyToClipboard(person.nric || '')}
+                  style={styles.copyIconButton}
+                >
+                  <IconSymbol name="doc.on.doc" size={14} color={palette.textMuted} />
+                </TouchableOpacity>
+              )}
+            </View>
 
             <View style={styles.section}>
               <SectionTitle text="Contact" palette={palette} />
-              <InfoRow palette={palette} label="Email" value={person.email} />
-              <InfoRow palette={palette} label="Phone" value={person.phone} />
-              <InfoRow palette={palette} label="Address" value={person.address} />
+              <InfoRowWithCopy palette={palette} label="Email" value={person.email} onCopy={handleCopyToClipboard} />
+              <InfoRowWithCopy palette={palette} label="Phone" value={person.phone} onCopy={handleCopyToClipboard} />
+              <InfoRowWithCopy palette={palette} label="Address" value={person.address} onCopy={handleCopyToClipboard} />
             </View>
 
             <View style={styles.section}>
@@ -602,6 +620,35 @@ const InfoRow = ({
   );
 };
 
+const InfoRowWithCopy = ({
+  label,
+  value,
+  palette,
+  onCopy,
+}: {
+  label: string;
+  value?: string | number | null;
+  palette: Palette;
+  onCopy: (text: string) => void;
+}) => {
+  if (value === undefined || value === null || value === '') return null;
+  const valueString = String(value);
+  return (
+    <View style={stylesFactory.infoRow}>
+      <Text style={[stylesFactory.infoLabel, { color: palette.textMuted }]}>{label}</Text>
+      <View style={stylesFactory.infoValueRow}>
+        <Text style={[stylesFactory.infoValue, { color: palette.text, flex: 1 }]}>{valueString}</Text>
+        <TouchableOpacity
+          onPress={() => onCopy(valueString)}
+          style={stylesFactory.copyIconButton}
+        >
+          <IconSymbol name="doc.on.doc" size={14} color={palette.textMuted} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
 const createStyles = (palette: Palette) =>
   StyleSheet.create({
     container: {
@@ -664,6 +711,16 @@ const createStyles = (palette: Palette) =>
       textAlign: 'center',
       color: palette.textMuted,
       marginTop: 6,
+    },
+    nricRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      justifyContent: 'center',
+      marginTop: 6,
+    },
+    copyIconButton: {
+      padding: 4,
     },
     section: {
       marginTop: 26,
@@ -854,6 +911,12 @@ const stylesFactory = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 12,
   },
+  nricRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    justifyContent: 'center',
+  },
   infoRow: {
     marginBottom: 10,
   },
@@ -865,6 +928,15 @@ const stylesFactory = StyleSheet.create({
   infoValue: {
     fontSize: 16,
     marginTop: 2,
+  },
+  infoValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 2,
+  },
+  copyIconButton: {
+    padding: 4,
   },
 });
 

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
@@ -195,17 +196,12 @@ export default function HomeScreen() {
         <View style={styles.toggleRow}>
           <ThemeToggle />
         </View>
-        <View style={styles.authHeader}>
-          <Text style={styles.brandBadge}>Syed Salleh</Text>
-          <Text style={styles.authTitle}>
-            {isRegisterMode ? 'Create an account' : 'Secure access to your people data'}
-          </Text>
-          <Text style={styles.authSubtitle}>
-            {isRegisterMode
-              ? 'Enter your details below to create your account'
-              : 'Sign in with your corporate credentials to continue.'}
-          </Text>
-        </View>
+
+        <Image
+          source={require('../../assets/images/login.png')}
+          style={styles.loginImage}
+          resizeMode="contain"
+        />
 
         <View style={styles.authCard}>
           {isRegisterMode && (
@@ -706,6 +702,11 @@ const createStyles = (palette: Palette) =>
       justifyContent: 'center',
     },
     authHeader: {
+      marginBottom: 24,
+    },
+    loginImage: {
+      width: '100%',
+      height: 200,
       marginBottom: 24,
     },
     brandBadge: {

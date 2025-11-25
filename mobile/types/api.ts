@@ -54,10 +54,18 @@ export type PersonShare = {
   created_at: string;
 };
 
+export type UpcomingEvent = {
+  id: number;
+  name: string;
+  event_date: string;
+  days_until: number | null;
+};
+
 export type DashboardData = {
   user: User;
   stats: DashboardStats;
   upcoming_birthdays: UpcomingBirthday[];
+  upcoming_events: UpcomingEvent[];
   my_people: MyPerson[];
 };
 
@@ -100,4 +108,3 @@ export type NotificationsResponse = {
   notifications: Notification[];
   unread_count: number;
 };
-

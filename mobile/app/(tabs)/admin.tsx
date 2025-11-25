@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -7,14 +7,14 @@ import {
   TouchableOpacity,
   View,
   RefreshControl,
-} from 'react-native';
-import { useRouter } from 'expo-router';
+} from "react-native";
+import { useRouter } from "expo-router";
 
-import { Palette } from '@/constants/theme';
-import { useThemePalette } from '@/context/ThemePreferenceContext';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { useAuth } from '@/context/AuthContext';
-import { apiGet, apiPost, apiDelete } from '@/apiClient';
+import { Palette } from "@/constants/theme";
+import { useThemePalette } from "@/context/ThemePreferenceContext";
+import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useAuth } from "@/context/AuthContext";
+import { apiGet, apiPost, apiDelete } from "@/apiClient";
 
 type AdminStats = {
   overview: {
@@ -75,7 +75,7 @@ export default function AdminTabScreen() {
   useEffect(() => {
     // Redirect non-admin users immediately
     if (!isAdmin) {
-      router.replace('/(tabs)');
+      router.replace("/(tabs)");
       return;
     }
 
@@ -90,14 +90,16 @@ export default function AdminTabScreen() {
 
     try {
       const [statsData, usersData] = await Promise.all([
-        apiGet('/api/admin/statistics', token) as Promise<AdminStats>,
-        apiGet('/api/admin/users?status=pending', token) as Promise<{ users: User[] }>,
+        apiGet("/api/admin/statistics", token) as Promise<AdminStats>,
+        apiGet("/api/admin/users?status=pending", token) as Promise<{
+          users: User[];
+        }>,
       ]);
 
       setStats(statsData);
       setPendingUsers(usersData.users || []);
     } catch (err: any) {
-      console.error('Error loading admin data:', err);
+      console.error("Error loading admin data:", err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -116,8 +118,8 @@ export default function AdminTabScreen() {
       await apiPost(`/api/admin/users/${userId}/approve`, token, {});
       await loadData();
     } catch (err: any) {
-      console.error('Error approving user:', err);
-      alert(err?.message || 'Failed to approve user');
+      console.error("Error approving user:", err);
+      alert(err?.message || "Failed to approve user");
     } finally {
       setActionLoading(null);
     }
@@ -130,8 +132,8 @@ export default function AdminTabScreen() {
       await apiPost(`/api/admin/users/${userId}/reject`, token, {});
       await loadData();
     } catch (err: any) {
-      console.error('Error rejecting user:', err);
-      alert(err?.message || 'Failed to reject user');
+      console.error("Error rejecting user:", err);
+      alert(err?.message || "Failed to reject user");
     } finally {
       setActionLoading(null);
     }
@@ -162,51 +164,65 @@ export default function AdminTabScreen() {
       </View>
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         {/* Statistics Cards */}
         {stats && (
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: palette.tint }]}>
+              <View
+                style={[styles.statIcon, { backgroundColor: palette.tint }]}
+              >
                 <IconSymbol name="person.2" size={24} color="#fff" />
               </View>
               <Text style={styles.statValue}>{stats.overview.total_users}</Text>
               <Text style={styles.statLabel}>Total Users</Text>
               <Text style={styles.statSubtext}>
-                {stats.overview.total_admins} admins, {stats.overview.pending_users} pending
+                {stats.overview.total_admins} admins,{" "}
+                {stats.overview.pending_users} pending
               </Text>
             </View>
 
             <TouchableOpacity
               style={[styles.statCard, styles.pendingCard]}
-              onPress={() => router.push('/admin/users')}
+              onPress={() => router.push("/admin/users")}
             >
-              <View style={[styles.statIcon, { backgroundColor: '#F97316' }]}>
+              <View style={[styles.statIcon, { backgroundColor: "#F97316" }]}>
                 <IconSymbol name="checkmark.circle" size={24} color="#fff" />
               </View>
-              <Text style={styles.statValue}>{stats.overview.pending_users}</Text>
+              <Text style={styles.statValue}>
+                {stats.overview.pending_users}
+              </Text>
               <Text style={styles.statLabel}>Pending</Text>
               <Text style={styles.statSubtext}>User approvals</Text>
             </TouchableOpacity>
 
             <View style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: '#8B5CF6' }]}>
+              <View style={[styles.statIcon, { backgroundColor: "#8B5CF6" }]}>
                 <IconSymbol name="person.3" size={24} color="#fff" />
               </View>
-              <Text style={styles.statValue}>{stats.overview.total_people}</Text>
+              <Text style={styles.statValue}>
+                {stats.overview.total_people}
+              </Text>
               <Text style={styles.statLabel}>Total People</Text>
-              <Text style={styles.statSubtext}>+{stats.overview.people_this_month} this month</Text>
+              <Text style={styles.statSubtext}>
+                +{stats.overview.people_this_month} this month
+              </Text>
             </View>
 
             <View style={styles.statCard}>
-              <View style={[styles.statIcon, { backgroundColor: '#10B981' }]}>
+              <View style={[styles.statIcon, { backgroundColor: "#10B981" }]}>
                 <IconSymbol name="doc.text" size={24} color="#fff" />
               </View>
-              <Text style={styles.statValue}>{stats.overview.total_documents}</Text>
+              <Text style={styles.statValue}>
+                {stats.overview.total_documents}
+              </Text>
               <Text style={styles.statLabel}>Documents</Text>
               <Text style={styles.statSubtext}>
-                {stats.overview.public_documents} public, {stats.overview.private_documents} private
+                {stats.overview.public_documents} public,{" "}
+                {stats.overview.private_documents} private
               </Text>
             </View>
           </View>
@@ -231,7 +247,8 @@ export default function AdminTabScreen() {
                     <Text style={styles.userName}>{pendingUser.name}</Text>
                     <Text style={styles.userEmail}>{pendingUser.email}</Text>
                     <Text style={styles.userMeta}>
-                      Registered {new Date(pendingUser.created_at).toLocaleDateString()}
+                      Registered{" "}
+                      {new Date(pendingUser.created_at).toLocaleDateString()}
                     </Text>
                   </View>
                 </View>
@@ -255,7 +272,14 @@ export default function AdminTabScreen() {
                     {actionLoading === pendingUser.id ? (
                       <ActivityIndicator size="small" color="#fff" />
                     ) : (
-                      <Text style={[styles.actionButtonText, styles.rejectButtonText]}>Reject</Text>
+                      <Text
+                        style={[
+                          styles.actionButtonText,
+                          styles.rejectButtonText,
+                        ]}
+                      >
+                        Reject
+                      </Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -269,19 +293,39 @@ export default function AdminTabScreen() {
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => router.push('/admin/users')}
+            onPress={() => router.push("/admin/users")}
           >
             <IconSymbol name="person.2" size={24} color={palette.tint} />
             <Text style={styles.actionCardText}>Manage Users</Text>
-            <IconSymbol name="chevron.right" size={20} color={palette.textMuted} />
+            <IconSymbol
+              name="chevron.right"
+              size={20}
+              color={palette.textMuted}
+            />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => router.push('/admin/activity')}
+            onPress={() => router.push("/admin/events")}
+          >
+            <IconSymbol name="calendar" size={24} color={palette.tint} />
+            <Text style={styles.actionCardText}>Manage Events</Text>
+            <IconSymbol
+              name="chevron.right"
+              size={20}
+              color={palette.textMuted}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => router.push("/admin/activity")}
           >
             <IconSymbol name="clock" size={24} color={palette.tint} />
             <Text style={styles.actionCardText}>Activity Log</Text>
-            <IconSymbol name="chevron.right" size={20} color={palette.textMuted} />
+            <IconSymbol
+              name="chevron.right"
+              size={20}
+              color={palette.textMuted}
+            />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -305,7 +349,7 @@ const createStyles = (palette: Palette) =>
     },
     headerTitle: {
       fontSize: 28,
-      fontWeight: '700',
+      fontWeight: "700",
       color: palette.text,
     },
     content: {
@@ -314,12 +358,12 @@ const createStyles = (palette: Palette) =>
     },
     centered: {
       flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
     },
     errorText: {
       fontSize: 20,
-      fontWeight: '600',
+      fontWeight: "600",
       color: palette.danger,
       marginBottom: 8,
     },
@@ -328,46 +372,46 @@ const createStyles = (palette: Palette) =>
       color: palette.textMuted,
     },
     statsGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
+      flexDirection: "row",
+      flexWrap: "wrap",
       gap: 12,
     },
     statCard: {
       flex: 1,
-      minWidth: '47%',
+      minWidth: "47%",
       backgroundColor: palette.elevated,
       borderRadius: 16,
       padding: 16,
-      alignItems: 'center',
+      alignItems: "center",
     },
     pendingCard: {
       borderWidth: 2,
-      borderColor: '#F97316',
+      borderColor: "#F97316",
     },
     statIcon: {
       width: 48,
       height: 48,
       borderRadius: 24,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       marginBottom: 12,
     },
     statValue: {
       fontSize: 32,
-      fontWeight: '700',
+      fontWeight: "700",
       color: palette.text,
       marginBottom: 4,
     },
     statLabel: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
       color: palette.text,
       marginBottom: 4,
     },
     statSubtext: {
       fontSize: 12,
       color: palette.textMuted,
-      textAlign: 'center',
+      textAlign: "center",
     },
     section: {
       backgroundColor: palette.elevated,
@@ -376,14 +420,14 @@ const createStyles = (palette: Palette) =>
       gap: 12,
     },
     sectionHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 8,
       marginBottom: 8,
     },
     sectionTitle: {
       fontSize: 18,
-      fontWeight: '600',
+      fontWeight: "600",
       color: palette.text,
     },
     sectionCount: {
@@ -397,7 +441,7 @@ const createStyles = (palette: Palette) =>
       gap: 12,
     },
     userInfo: {
-      flexDirection: 'row',
+      flexDirection: "row",
       gap: 12,
     },
     userAvatar: {
@@ -405,20 +449,20 @@ const createStyles = (palette: Palette) =>
       height: 48,
       borderRadius: 24,
       backgroundColor: palette.tint,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
     },
     userAvatarText: {
-      color: '#fff',
+      color: "#fff",
       fontSize: 20,
-      fontWeight: '700',
+      fontWeight: "700",
     },
     userDetails: {
       flex: 1,
     },
     userName: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
       color: palette.text,
       marginBottom: 4,
     },
@@ -432,7 +476,7 @@ const createStyles = (palette: Palette) =>
       color: palette.textMuted,
     },
     userActions: {
-      flexDirection: 'row',
+      flexDirection: "row",
       gap: 8,
     },
     actionButton: {
@@ -440,29 +484,29 @@ const createStyles = (palette: Palette) =>
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderRadius: 8,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       minHeight: 40,
     },
     approveButton: {
       backgroundColor: palette.tint,
     },
     rejectButton: {
-      backgroundColor: 'transparent',
+      backgroundColor: "transparent",
       borderWidth: 1,
       borderColor: palette.danger,
     },
     actionButtonText: {
-      color: '#fff',
+      color: "#fff",
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     rejectButtonText: {
       color: palette.danger,
     },
     actionCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 12,
       backgroundColor: palette.surface,
       borderRadius: 12,
@@ -471,8 +515,7 @@ const createStyles = (palette: Palette) =>
     actionCardText: {
       flex: 1,
       fontSize: 16,
-      fontWeight: '500',
+      fontWeight: "500",
       color: palette.text,
     },
   });
-

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -12,18 +12,18 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { useRouter } from 'expo-router';
+} from "react-native";
+import { useRouter } from "expo-router";
 
-import { Palette } from '@/constants/theme';
-import { useThemePalette } from '@/context/ThemePreferenceContext';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { formatPersonName } from '@/utils/text';
+import { Palette } from "@/constants/theme";
+import { useThemePalette } from "@/context/ThemePreferenceContext";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { IconSymbol } from "@/components/ui/icon-symbol";
+import { formatPersonName } from "@/utils/text";
 
-import { apiGet } from '../../apiClient';
-import { useAuth } from '../../context/AuthContext';
-import type { DashboardData, NotificationsResponse } from '../../types/api';
+import { apiGet } from "../../apiClient";
+import { useAuth } from "../../context/AuthContext";
+import type { DashboardData, NotificationsResponse } from "../../types/api";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -32,22 +32,30 @@ export default function HomeScreen() {
 
   // --- Auth state ---
   const [isRegisterMode, setIsRegisterMode] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [passwordConfirmation, setPasswordConfirmation] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [loadingLogin, setLoadingLogin] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [registerSuccess, setRegisterSuccess] = useState(false);
 
-  const { token, user, isLoading: authLoading, login, register, logout, getRememberedEmail } = useAuth();
+  const {
+    token,
+    user,
+    isLoading: authLoading,
+    login,
+    register,
+    logout,
+    getRememberedEmail,
+  } = useAuth();
 
   // Load remembered email on mount (only for login mode)
   useEffect(() => {
     if (isRegisterMode) {
       // Clear email when in register mode
-      setEmail('');
+      setEmail("");
       return;
     }
 
@@ -72,17 +80,17 @@ export default function HomeScreen() {
     setRegisterSuccess(false);
 
     if (!name.trim() || !email.trim() || !password || !passwordConfirmation) {
-      setLoginError('All fields are required');
+      setLoginError("All fields are required");
       return;
     }
 
     if (password.length < 8) {
-      setLoginError('Password must be at least 8 characters');
+      setLoginError("Password must be at least 8 characters");
       return;
     }
 
     if (password !== passwordConfirmation) {
-      setLoginError('Passwords do not match');
+      setLoginError("Passwords do not match");
       return;
     }
 
@@ -91,17 +99,17 @@ export default function HomeScreen() {
       await register(name.trim(), email.trim(), password, passwordConfirmation);
       setRegisterSuccess(true);
       // Clear form
-      setName('');
-      setEmail('');
-      setPassword('');
-      setPasswordConfirmation('');
+      setName("");
+      setEmail("");
+      setPassword("");
+      setPasswordConfirmation("");
       // Switch back to login mode after 3 seconds
       setTimeout(() => {
         setIsRegisterMode(false);
         setRegisterSuccess(false);
       }, 3000);
     } catch (err: any) {
-      setLoginError(err?.message ?? 'Registration failed');
+      setLoginError(err?.message ?? "Registration failed");
     } finally {
       setLoadingLogin(false);
     }
@@ -112,7 +120,7 @@ export default function HomeScreen() {
     setRegisterSuccess(false);
 
     if (!email || !password) {
-      setLoginError('Please fill in both email and password.');
+      setLoginError("Please fill in both email and password.");
       return;
     }
 
@@ -120,15 +128,17 @@ export default function HomeScreen() {
 
     try {
       await login(email, password, rememberMe);
-      setPassword('');
+      setPassword("");
       setDashboard(null);
       setDashError(null);
     } catch (err: any) {
-      console.log('Login error:', err);
+      console.log("Login error:", err);
       if (err?.requiresApproval) {
-        setLoginError('Your account is pending admin approval. Please wait for approval before signing in.');
+        setLoginError(
+          "Your account is pending admin approval. Please wait for approval before signing in."
+        );
       } else {
-        setLoginError(err?.message ?? 'Login failed');
+        setLoginError(err?.message ?? "Login failed");
       }
     } finally {
       setLoadingLogin(false);
@@ -137,7 +147,7 @@ export default function HomeScreen() {
 
   const handleLogout = () => {
     logout();
-    setPassword('');
+    setPassword("");
     setLoginError(null);
     setDashboard(null);
     setDashError(null);
@@ -153,18 +163,23 @@ export default function HomeScreen() {
     try {
       setLoadingDash(true);
       setDashError(null);
-      const json = (await apiGet('/api/dashboard', token)) as DashboardData;
+      const json = (await apiGet("/api/dashboard", token)) as DashboardData;
       setDashboard(json);
     } catch (err: any) {
-      console.log('Dashboard error:', err);
+      console.log("Dashboard error:", err);
       // Check if user needs approval
-      if (err?.message?.includes('pending admin approval') || err?.message?.includes('requires_approval')) {
-        setDashError('Your account is pending admin approval. Please wait for approval.');
+      if (
+        err?.message?.includes("pending admin approval") ||
+        err?.message?.includes("requires_approval")
+      ) {
+        setDashError(
+          "Your account is pending admin approval. Please wait for approval."
+        );
         // Logout user if they're not approved
         logout();
-        setPassword('');
+        setPassword("");
       } else {
-        setDashError(err?.message ?? 'Failed to load dashboard');
+        setDashError(err?.message ?? "Failed to load dashboard");
       }
     } finally {
       setLoadingDash(false);
@@ -174,7 +189,6 @@ export default function HomeScreen() {
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
-
 
   if (authLoading) {
     return (
@@ -191,14 +205,14 @@ export default function HomeScreen() {
     return (
       <KeyboardAvoidingView
         style={[styles.authScreen]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={styles.toggleRow}>
           <ThemeToggle />
         </View>
 
         <Image
-          source={require('../../assets/images/login.png')}
+          source={require("../../assets/images/login.png")}
           style={styles.loginImage}
           resizeMode="contain"
         />
@@ -232,7 +246,7 @@ export default function HomeScreen() {
           <Text style={styles.authLabel}>Password</Text>
           <TextInput
             style={styles.authInput}
-            placeholder={isRegisterMode ? 'At least 8 characters' : '••••••••'}
+            placeholder={isRegisterMode ? "At least 8 characters" : "••••••••"}
             placeholderTextColor={palette.textMuted}
             secureTextEntry
             value={password}
@@ -262,7 +276,7 @@ export default function HomeScreen() {
                 value={rememberMe}
                 onValueChange={setRememberMe}
                 trackColor={{ false: palette.border, true: palette.tint }}
-                thumbColor={rememberMe ? palette.tint : '#fff'}
+                thumbColor={rememberMe ? palette.tint : "#fff"}
               />
             </View>
           )}
@@ -271,13 +285,17 @@ export default function HomeScreen() {
           {registerSuccess && (
             <View style={styles.successContainer}>
               <Text style={styles.successText}>
-                Registration successful! Your account is pending admin approval. You can sign in once approved.
+                Registration successful! Your account is pending admin approval.
+                You can sign in once approved.
               </Text>
             </View>
           )}
 
           <TouchableOpacity
-            style={[styles.primaryButton, loadingLogin && styles.buttonDisabled]}
+            style={[
+              styles.primaryButton,
+              loadingLogin && styles.buttonDisabled,
+            ]}
             onPress={isRegisterMode ? handleRegister : handleLogin}
             disabled={loadingLogin}
           >
@@ -285,7 +303,7 @@ export default function HomeScreen() {
               <ActivityIndicator color="#ffffff" />
             ) : (
               <Text style={styles.primaryButtonText}>
-                {isRegisterMode ? 'Create Account' : 'Sign in'}
+                {isRegisterMode ? "Create Account" : "Sign in"}
               </Text>
             )}
           </TouchableOpacity>
@@ -296,18 +314,18 @@ export default function HomeScreen() {
               setIsRegisterMode(!isRegisterMode);
               setLoginError(null);
               setRegisterSuccess(false);
-              setPassword('');
-              setPasswordConfirmation('');
+              setPassword("");
+              setPasswordConfirmation("");
               // Clear email when switching to register mode
               if (!isRegisterMode) {
-                setEmail('');
-                setName('');
+                setEmail("");
+                setName("");
               }
             }}
           >
             <Text style={styles.switchAuthText}>
               {isRegisterMode
-                ? 'Already have an account? Sign in'
+                ? "Already have an account? Sign in"
                 : "Don't have an account? Create one"}
             </Text>
           </TouchableOpacity>
@@ -330,7 +348,9 @@ export default function HomeScreen() {
   if (dashError && !dashboard) {
     return (
       <View style={styles.centerScreen}>
-        <Text style={[styles.errorText, { textAlign: 'center' }]}>{dashError}</Text>
+        <Text style={[styles.errorText, { textAlign: "center" }]}>
+          {dashError}
+        </Text>
 
         <TouchableOpacity style={styles.secondaryButton} onPress={handleLogout}>
           <Text style={styles.secondaryButtonText}>Log out</Text>
@@ -348,13 +368,15 @@ export default function HomeScreen() {
         {token && (
           <TouchableOpacity
             style={styles.notificationButton}
-            onPress={() => router.push('/notifications')}
+            onPress={() => router.push("/notifications")}
           >
             <IconSymbol size={24} name="bell" color={palette.text} />
             {unreadNotificationCount > 0 && (
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>
-                  {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                  {unreadNotificationCount > 99
+                    ? "99+"
+                    : unreadNotificationCount}
                 </Text>
               </View>
             )}
@@ -368,12 +390,14 @@ export default function HomeScreen() {
         }
       >
         <View style={styles.heroCard}>
-          <Text style={styles.heroTitle}>Welcome back, {heroName || user.name}</Text>
+          <Text style={styles.heroTitle}>
+            Welcome back, {heroName || user.name}
+          </Text>
 
           <View style={styles.heroActions}>
             <TouchableOpacity
               style={styles.heroButton}
-              onPress={() => router.push('/people/my')}
+              onPress={() => router.push("/people/my")}
             >
               <Text style={styles.heroButtonLabel}>My People</Text>
               <Text style={styles.heroButtonValue}>
@@ -382,7 +406,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.heroButton}
-              onPress={() => router.push('/people/all')}
+              onPress={() => router.push("/people/all")}
             >
               <Text style={styles.heroButtonLabel}>All People</Text>
               <Text style={styles.heroButtonValue}>
@@ -391,7 +415,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.heroButton}
-              onPress={() => router.push('/people/favorites')}
+              onPress={() => router.push("/people/favorites")}
             >
               <Text style={styles.heroButtonLabel}>Favourite</Text>
               <Text style={styles.heroButtonValue}>
@@ -400,7 +424,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.heroButton}
-              onPress={() => router.push('/people/create')}
+              onPress={() => router.push("/people/create")}
             >
               <Text style={styles.heroButtonLabel}>Add Person</Text>
               <Text style={styles.heroButtonValue}>+</Text>
@@ -416,18 +440,20 @@ export default function HomeScreen() {
 
           {dashboard?.upcoming_birthdays.length === 0 ? (
             <Text style={[styles.emptyText]}>
-              No birthdays coming up. You’re all caught up.
+              No birthdays coming up. You're all caught up.
             </Text>
           ) : (
             dashboard?.upcoming_birthdays.map((p) => (
               <View key={p.id} style={styles.listRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.listTitle}>{formatPersonName(p.name) || p.name}</Text>
+                  <Text style={styles.listTitle}>
+                    {formatPersonName(p.name) || p.name}
+                  </Text>
                   <Text style={styles.listSubtitle}>
                     {p.days_until === 0
-                      ? 'Today'
+                      ? "Today"
                       : p.days_until === 1
-                      ? 'Tomorrow'
+                      ? "Tomorrow"
                       : `in ${p.days_until} days`}
                   </Text>
                 </View>
@@ -439,7 +465,46 @@ export default function HomeScreen() {
           )}
         </View>
 
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Upcoming Events</Text>
+            <Text style={styles.sectionSubtitle}>Next 30 days</Text>
+          </View>
 
+          {dashboard?.upcoming_events &&
+          dashboard.upcoming_events.length === 0 ? (
+            <Text style={[styles.emptyText]}>No events coming up.</Text>
+          ) : (
+            dashboard?.upcoming_events.map((event) => {
+              const eventDate = new Date(event.event_date);
+              const formattedDate = eventDate.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              });
+
+              return (
+                <View key={event.id} style={styles.listRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.listTitle}>{event.name}</Text>
+                    <Text style={styles.listSubtitle}>
+                      {event.days_until === null
+                        ? "Past event"
+                        : event.days_until === 0
+                        ? "Today"
+                        : event.days_until === 1
+                        ? "Tomorrow"
+                        : `in ${event.days_until} days`}
+                    </Text>
+                  </View>
+                  <View style={styles.pill}>
+                    <Text style={styles.pillText}>{formattedDate}</Text>
+                  </View>
+                </View>
+              );
+            })
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -452,9 +517,9 @@ const createStyles = (palette: Palette) =>
       backgroundColor: palette.background,
     },
     dashboardHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       paddingHorizontal: 20,
       paddingTop: 60,
       paddingBottom: 16,
@@ -464,29 +529,29 @@ const createStyles = (palette: Palette) =>
     },
     dashboardHeaderTitle: {
       fontSize: 28,
-      fontWeight: '700',
+      fontWeight: "700",
       color: palette.text,
     },
     notificationButton: {
-      position: 'relative',
+      position: "relative",
       padding: 8,
     },
     notificationBadge: {
-      position: 'absolute',
+      position: "absolute",
       top: 4,
       right: 4,
       backgroundColor: palette.danger,
       borderRadius: 10,
       minWidth: 20,
       height: 20,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       paddingHorizontal: 6,
     },
     notificationBadgeText: {
-      color: '#fff',
+      color: "#fff",
       fontSize: 11,
-      fontWeight: '700',
+      fontWeight: "700",
     },
     scrollContent: {
       paddingHorizontal: 20,
@@ -496,8 +561,8 @@ const createStyles = (palette: Palette) =>
     },
     centerScreen: {
       flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       backgroundColor: palette.background,
       padding: 24,
     },
@@ -516,7 +581,7 @@ const createStyles = (palette: Palette) =>
       elevation: 6,
     },
     heroEyebrow: {
-      textTransform: 'uppercase',
+      textTransform: "uppercase",
       letterSpacing: 1.2,
       fontSize: 12,
       color: palette.textMuted,
@@ -524,7 +589,7 @@ const createStyles = (palette: Palette) =>
     },
     heroTitle: {
       fontSize: 26,
-      fontWeight: '700',
+      fontWeight: "700",
       color: palette.text,
     },
     heroSubtitle: {
@@ -533,29 +598,29 @@ const createStyles = (palette: Palette) =>
       fontSize: 14,
     },
     heroActions: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
+      flexDirection: "row",
+      flexWrap: "wrap",
       gap: 12,
       marginTop: 24,
     },
     heroButton: {
       flex: 1,
-      minWidth: '47%',
+      minWidth: "47%",
       backgroundColor: palette.highlight,
       borderRadius: 20,
       padding: 16,
-      alignItems: 'center',
+      alignItems: "center",
     },
     heroButtonLabel: {
       color: palette.textMuted,
       fontSize: 13,
-      textTransform: 'uppercase',
+      textTransform: "uppercase",
       letterSpacing: 0.5,
     },
     heroButtonValue: {
       marginTop: 6,
       fontSize: 28,
-      fontWeight: '700',
+      fontWeight: "700",
       color: palette.text,
     },
     sectionCard: {
@@ -569,14 +634,14 @@ const createStyles = (palette: Palette) =>
       elevation: 4,
     },
     sectionHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       marginBottom: 16,
     },
     sectionTitle: {
       fontSize: 18,
-      fontWeight: '600',
+      fontWeight: "600",
       color: palette.text,
     },
     sectionSubtitle: {
@@ -588,8 +653,8 @@ const createStyles = (palette: Palette) =>
       fontSize: 14,
     },
     listRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 12,
       paddingVertical: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
@@ -597,7 +662,7 @@ const createStyles = (palette: Palette) =>
     },
     listTitle: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
       color: palette.text,
     },
     listSubtitle: {
@@ -613,10 +678,10 @@ const createStyles = (palette: Palette) =>
     pillText: {
       fontSize: 12,
       color: palette.text,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     quickGrid: {
-      flexDirection: 'row',
+      flexDirection: "row",
       gap: 12,
     },
     quickCard: {
@@ -629,7 +694,7 @@ const createStyles = (palette: Palette) =>
     },
     quickLabel: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
       color: palette.text,
     },
     quickHelper: {
@@ -642,12 +707,12 @@ const createStyles = (palette: Palette) =>
       height: 52,
       borderRadius: 16,
       backgroundColor: palette.tint,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
     },
     primaryButtonText: {
-      color: '#fff',
-      fontWeight: '600',
+      color: "#fff",
+      fontWeight: "600",
       fontSize: 16,
     },
     secondaryButton: {
@@ -656,13 +721,13 @@ const createStyles = (palette: Palette) =>
       borderRadius: 16,
       borderWidth: 1,
       borderColor: palette.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'transparent',
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "transparent",
     },
     secondaryButtonText: {
       color: palette.text,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     buttonDisabled: {
       opacity: 0.7,
@@ -676,55 +741,55 @@ const createStyles = (palette: Palette) =>
       marginTop: 12,
       padding: 12,
       borderRadius: 12,
-      backgroundColor: '#10B98120',
+      backgroundColor: "#10B98120",
       borderWidth: 1,
-      borderColor: '#10B98140',
+      borderColor: "#10B98140",
     },
     successText: {
-      color: '#10B981',
+      color: "#10B981",
       fontSize: 13,
       lineHeight: 18,
     },
     switchAuthButton: {
       marginTop: 16,
-      alignItems: 'center',
+      alignItems: "center",
       paddingVertical: 12,
     },
     switchAuthText: {
       color: palette.tint,
       fontSize: 14,
-      fontWeight: '500',
+      fontWeight: "500",
     },
     authScreen: {
       flex: 1,
       padding: 24,
       backgroundColor: palette.background,
-      justifyContent: 'center',
+      justifyContent: "center",
     },
     authHeader: {
       marginBottom: 24,
     },
     loginImage: {
-      width: '100%',
+      width: "100%",
       height: 200,
       marginBottom: 24,
     },
     brandBadge: {
-      alignSelf: 'flex-start',
+      alignSelf: "flex-start",
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 999,
       backgroundColor: palette.tint,
-      color: '#fff',
-      fontWeight: '600',
+      color: "#fff",
+      fontWeight: "600",
       marginBottom: 12,
-      textTransform: 'uppercase',
+      textTransform: "uppercase",
       letterSpacing: 1,
       fontSize: 11,
     },
     authTitle: {
       fontSize: 28,
-      fontWeight: '700',
+      fontWeight: "700",
       color: palette.text,
     },
     authSubtitle: {
@@ -746,7 +811,7 @@ const createStyles = (palette: Palette) =>
     authLabel: {
       fontSize: 13,
       color: palette.textMuted,
-      textTransform: 'uppercase',
+      textTransform: "uppercase",
       letterSpacing: 0.6,
       marginBottom: 6,
       marginTop: 16,
@@ -761,17 +826,17 @@ const createStyles = (palette: Palette) =>
       backgroundColor: palette.surface,
     },
     rememberMeRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       marginTop: 16,
     },
     rememberMeLabel: {
       fontSize: 14,
-      fontWeight: '500',
+      fontWeight: "500",
     },
     toggleRow: {
-      alignItems: 'flex-end',
+      alignItems: "flex-end",
       marginBottom: 16,
     },
     // toggleRow is still used in login screen

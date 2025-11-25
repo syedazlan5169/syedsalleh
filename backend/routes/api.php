@@ -306,6 +306,25 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
         $allPeopleCount = Person::count();
         $favoritesCount = $user->favorites()->count();
 
+        // Upcoming events (next 30 days)
+        $now = now()->startOfDay();
+        $upcomingEvents = \App\Models\Event::where('event_date', '>=', $now->toDateString())
+            ->where('event_date', '<=', $now->copy()->addDays(30)->toDateString())
+            ->orderBy('event_date', 'asc')
+            ->get()
+            ->map(function ($event) use ($now) {
+                $eventDate = \Carbon\Carbon::parse($event->event_date)->startOfDay();
+                $daysUntil = (int) floor($now->diffInDays($eventDate, false));
+                
+                return [
+                    'id' => $event->id,
+                    'name' => $event->name,
+                    'event_date' => $event->event_date->toDateString(),
+                    'days_until' => $daysUntil >= 0 ? $daysUntil : null,
+                ];
+            })
+            ->values();
+
         return response()->json([
             'user' => [
                 'id'    => $user->id,
@@ -318,6 +337,7 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
                 'favorites_count'  => $favoritesCount,
             ],
             'upcoming_birthdays' => $upcomingBirthdays,
+            'upcoming_events' => $upcomingEvents,
             'my_people'          => $myPeople,
         ]);
     });
@@ -1326,6 +1346,32 @@ Route::middleware(['auth:sanctum', 'approved.api'])->group(function () {
             'people' => $people,
         ]);
     });
+
+    // Events - All authenticated users can view
+    Route::get('/events', function (Request $request) {
+        $events = \App\Models\Event::orderBy('event_date', 'asc')
+            ->get()
+            ->map(function ($event) {
+                $now = now()->startOfDay();
+                $eventDate = \Carbon\Carbon::parse($event->event_date)->startOfDay();
+                $daysUntil = (int) floor($now->diffInDays($eventDate, false));
+                
+                return [
+                    'id' => $event->id,
+                    'name' => $event->name,
+                    'event_date' => $event->event_date->toDateString(),
+                    'days_until' => $daysUntil >= 0 ? $daysUntil : null,
+                    'is_past' => $daysUntil < 0,
+                    'created_at' => optional($event->created_at)->toDateTimeString(),
+                    'updated_at' => optional($event->updated_at)->toDateTimeString(),
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'events' => $events,
+        ]);
+    });
 });
 
 // Admin routes (only for admins)
@@ -1915,6 +1961,110 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
             'per_page' => $perPage,
             'page' => $page,
             'has_more' => ($page * $perPage) < $total,
+        ]);
+    });
+
+    Route::post('/events', function (Request $request) {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'event_date' => ['required', 'date'],
+        ]);
+
+        $event = \App\Models\Event::create($data);
+
+        // Log activity
+        ActivityLogger::log(
+            'admin.event_created',
+            __(':admin_name created event: :event_name', [
+                'admin_name' => $request->user()->name,
+                'event_name' => $event->name,
+            ]),
+            $event,
+            ['via' => 'mobile_app']
+        );
+
+        $eventDate = \Carbon\Carbon::parse($event->event_date)->startOfDay();
+        $now = now()->startOfDay();
+        $daysUntil = (int) floor($now->diffInDays($eventDate, false));
+
+        return response()->json([
+            'message' => 'Event created successfully.',
+            'event' => [
+                'id' => $event->id,
+                'name' => $event->name,
+                'event_date' => $event->event_date->toDateString(),
+                'days_until' => $daysUntil >= 0 ? $daysUntil : null,
+                'is_past' => $daysUntil < 0,
+                'created_at' => optional($event->created_at)->toDateTimeString(),
+                'updated_at' => optional($event->updated_at)->toDateTimeString(),
+            ],
+        ], 201);
+    });
+
+    Route::put('/events/{event}', function (Request $request, \App\Models\Event $event) {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'event_date' => ['required', 'date'],
+        ]);
+
+        $event->update($data);
+
+        // Log activity
+        ActivityLogger::log(
+            'admin.event_updated',
+            __(':admin_name updated event: :event_name', [
+                'admin_name' => $request->user()->name,
+                'event_name' => $event->name,
+            ]),
+            $event,
+            ['via' => 'mobile_app']
+        );
+
+        $eventDate = \Carbon\Carbon::parse($event->event_date)->startOfDay();
+        $now = now()->startOfDay();
+        $daysUntil = (int) floor($now->diffInDays($eventDate, false));
+
+        return response()->json([
+            'message' => 'Event updated successfully.',
+            'event' => [
+                'id' => $event->id,
+                'name' => $event->name,
+                'event_date' => $event->event_date->toDateString(),
+                'days_until' => $daysUntil >= 0 ? $daysUntil : null,
+                'is_past' => $daysUntil < 0,
+                'created_at' => optional($event->created_at)->toDateTimeString(),
+                'updated_at' => optional($event->updated_at)->toDateTimeString(),
+            ],
+        ]);
+    });
+
+    Route::delete('/events/{id}', function (Request $request, $id) {
+        $event = \App\Models\Event::find($id);
+
+        if (!$event) {
+            return response()->json([
+                'message' => 'Event not found.',
+            ], 404);
+        }
+
+        $eventName = $event->name;
+        $eventId = $event->id;
+
+        $event->delete();
+
+        // Log activity
+        ActivityLogger::log(
+            'admin.event_deleted',
+            __(':admin_name deleted event: :event_name', [
+                'admin_name' => $request->user()->name,
+                'event_name' => $eventName,
+            ]),
+            null,
+            ['event_id' => $eventId, 'via' => 'mobile_app']
+        );
+
+        return response()->json([
+            'message' => 'Event deleted successfully.',
         ]);
     });
 });

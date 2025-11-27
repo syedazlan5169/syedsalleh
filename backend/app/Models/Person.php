@@ -176,10 +176,13 @@ class Person extends Model
     {
         $today = now();
         $thisYear = $today->year;
-        $birthday = $this->date_of_birth->setYear($thisYear);
+        $birthday = $this->date_of_birth
+            ->setYear($thisYear)
+            ->startOfDay();
+        $todayStart = $today->clone()->startOfDay();
 
-        // If birthday has passed this year, use next year
-        if ($birthday->isPast()) {
+        // If the birthday (as a date) already happened this year, look at next year
+        if ($birthday->lt($todayStart)) {
             $birthday->addYear();
         }
 

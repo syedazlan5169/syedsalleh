@@ -1,6 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Palette } from '@/constants/theme';
 import { useThemePalette } from '@/context/ThemePreferenceContext';
@@ -48,6 +57,11 @@ function mapPersonToFormValues(person: PersonDetail): PersonFormValues {
 export default function EditPersonScreen() {
   const palette = useThemePalette();
   const styles = useMemo(() => createStyles(palette), [palette]);
+  const insets = useSafeAreaInsets();
+  const keyboardVerticalOffset = useMemo(
+    () => (Platform.OS === 'ios' ? 80 : 0) + insets.bottom,
+    [insets.bottom],
+  );
 
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
@@ -125,25 +139,34 @@ export default function EditPersonScreen() {
           headerShadowVisible: false,
         }}
       />
-      <ScrollView contentContainerStyle={styles.content}>
-        {loading && !initialValues ? (
-          <View style={styles.centered}>
-            <ActivityIndicator />
-            <Text style={styles.helperText}>Loading person…</Text>
-          </View>
-        ) : error ? (
-          <Text style={styles.errorText}>{error}</Text>
-        ) : !initialValues ? (
-          <Text style={styles.helperText}>Person not found.</Text>
-        ) : (
-          <PersonForm
-            initialValues={initialValues ?? defaultPersonFormValues}
-            submitting={saving}
-            submitLabel="Save Changes"
-            onSubmit={handleSubmit}
-          />
-        )}
-      </ScrollView>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={keyboardVerticalOffset}
+      >
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[styles.content, { paddingBottom: 40 + insets.bottom }]}
+        >
+          {loading && !initialValues ? (
+            <View style={styles.centered}>
+              <ActivityIndicator color={palette.tint} />
+              <Text style={styles.helperText}>Loading person…</Text>
+            </View>
+          ) : error ? (
+            <Text style={styles.errorText}>{error}</Text>
+          ) : !initialValues ? (
+            <Text style={styles.helperText}>Person not found.</Text>
+          ) : (
+            <PersonForm
+              initialValues={initialValues ?? defaultPersonFormValues}
+              submitting={saving}
+              submitLabel="Save Changes"
+              onSubmit={handleSubmit}
+            />
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -153,6 +176,9 @@ const createStyles = (palette: Palette) =>
     container: {
       flex: 1,
       backgroundColor: palette.background,
+    },
+    flex: {
+      flex: 1,
     },
     content: {
       padding: 20,

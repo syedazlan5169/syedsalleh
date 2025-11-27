@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 
@@ -37,6 +38,11 @@ type MessagesResponse = {
 export default function ChatTabScreen() {
   const palette = useThemePalette();
   const styles = useMemo(() => createStyles(palette), [palette]);
+  const insets = useSafeAreaInsets();
+  const keyboardVerticalOffset = useMemo(
+    () => (Platform.OS === 'ios' ? 60 : 0) + insets.bottom,
+    [insets.bottom],
+  );
 
   const { token, user } = useAuth();
   const router = useRouter();
@@ -136,12 +142,12 @@ export default function ChatTabScreen() {
       </View>
       <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={keyboardVerticalOffset}
       >
         <ScrollView
           ref={scrollViewRef}
-          contentContainerStyle={styles.messagesContainer}
+          contentContainerStyle={[styles.messagesContainer, { paddingBottom: 40 + insets.bottom }]}
           refreshControl={
             <RefreshControl refreshing={loading} onRefresh={loadMessages} tintColor={palette.tint} />
           }
@@ -195,7 +201,7 @@ export default function ChatTabScreen() {
           )}
         </ScrollView>
 
-        <View style={styles.inputContainer}>
+        <View style={[styles.inputContainer, { paddingBottom: 12 + insets.bottom }]}>
           {error && messages.length > 0 && (
             <Text style={styles.errorTextSmall}>{error}</Text>
           )}
@@ -342,7 +348,6 @@ const createStyles = (palette: Palette) =>
       borderTopColor: palette.border,
       paddingHorizontal: 16,
       paddingVertical: 12,
-      paddingBottom: Platform.OS === 'ios' ? 32 : 12,
     },
     inputRow: {
       flexDirection: 'row',

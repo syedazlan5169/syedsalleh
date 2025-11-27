@@ -1,6 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Palette } from '@/constants/theme';
 import { useThemePalette } from '@/context/ThemePreferenceContext';
@@ -12,6 +20,11 @@ import { useAuth } from '../../context/AuthContext';
 export default function CreatePersonScreen() {
   const palette = useThemePalette();
   const styles = useMemo(() => createStyles(palette), [palette]);
+  const insets = useSafeAreaInsets();
+  const keyboardVerticalOffset = useMemo(
+    () => (Platform.OS === 'ios' ? 80 : 0) + insets.bottom,
+    [insets.bottom],
+  );
 
   const { token } = useAuth();
   const router = useRouter();
@@ -60,16 +73,25 @@ export default function CreatePersonScreen() {
           headerShadowVisible: false,
         }}
       />
-      <ScrollView contentContainerStyle={styles.content}>
-        {error && <Text style={styles.errorText}>{error}</Text>}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={keyboardVerticalOffset}
+      >
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[styles.content, { paddingBottom: 40 + insets.bottom }]}
+        >
+          {error && <Text style={styles.errorText}>{error}</Text>}
 
-        <PersonForm
-          initialValues={defaultPersonFormValues}
-          submitting={saving}
-          submitLabel="Add Person"
-          onSubmit={handleSubmit}
-        />
-      </ScrollView>
+          <PersonForm
+            initialValues={defaultPersonFormValues}
+            submitting={saving}
+            submitLabel="Add Person"
+            onSubmit={handleSubmit}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -79,6 +101,9 @@ const createStyles = (palette: Palette) =>
     container: {
       flex: 1,
       backgroundColor: palette.background,
+    },
+    flex: {
+      flex: 1,
     },
     content: {
       padding: 20,

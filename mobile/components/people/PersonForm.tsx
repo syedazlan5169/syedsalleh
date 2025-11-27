@@ -210,6 +210,7 @@ export function PersonForm({
         onChangeText={(text) => handleChange('address', text)}
         placeholder="Address"
         multiline
+      numberOfLines={3}
       />
 
       <TouchableOpacity
@@ -259,6 +260,7 @@ type FormFieldProps = {
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   multiline?: boolean;
+  numberOfLines?: number;
   palette: Palette;
 };
 
@@ -270,30 +272,41 @@ const FormField = ({
   keyboardType = 'default',
   autoCapitalize = 'sentences',
   multiline = false,
+  numberOfLines,
   palette,
-}: FormFieldProps) => (
-  <View style={fieldStyles.field}>
-    <Text style={[fieldStyles.label, { color: palette.textMuted }]}>{label}</Text>
-    <TextInput
-      style={[
-        fieldStyles.input,
-        multiline && fieldStyles.inputMultiline,
-        {
-          borderColor: palette.border,
-          backgroundColor: palette.surface,
-          color: palette.text,
-        },
-      ]}
-      placeholder={placeholder}
-      placeholderTextColor={palette.textMuted}
-      value={value}
-      onChangeText={onChangeText}
-      keyboardType={keyboardType}
-      autoCapitalize={autoCapitalize}
-      multiline={multiline}
-    />
-  </View>
-);
+}: FormFieldProps) => {
+  const multilineProps =
+    multiline && numberOfLines
+      ? {
+          numberOfLines,
+        }
+      : {};
+
+  return (
+    <View style={fieldStyles.field}>
+      <Text style={[fieldStyles.label, { color: palette.textMuted }]}>{label}</Text>
+      <TextInput
+        style={[
+          fieldStyles.input,
+          multiline && fieldStyles.inputMultiline,
+          {
+            borderColor: palette.border,
+            backgroundColor: palette.surface,
+            color: palette.text,
+          },
+        ]}
+        placeholder={placeholder}
+        placeholderTextColor={palette.textMuted}
+        value={value}
+        onChangeText={onChangeText}
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
+        multiline={multiline}
+        {...multilineProps}
+      />
+    </View>
+  );
+};
 
 const createStyles = (palette: Palette) =>
   StyleSheet.create({

@@ -49,6 +49,6 @@ mobile/web-build/
 mobile/node_modules/
 
 # If later you run `expo prebuild`, these native folders will appear; ignore them too:
-mobile/android/
-mobile/ios/
+/mobile/android/
+/mobile/ios/
 
